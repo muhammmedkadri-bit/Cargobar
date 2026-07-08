@@ -1159,8 +1159,8 @@ const Dock = {
 /* ────────────────────────────────────────
    BOOTSTRAP
 ──────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', async () => {
-  await Store.load();
+document.addEventListener('DOMContentLoaded', () => {
+  // ── 1. UI'yı ANINDA başlat (Supabase'i bekleme) ──
   App.initCities();
   Router.init();
   TKG.setInputValue();
@@ -1178,4 +1178,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.App  = App;
   window.Slip = Slip;
   window.Dock = Dock;
+
+  // ── 2. Verileri ARKA PLANDA yükle (UI'yı bloke etme) ──
+  Store.load().then(() => {
+    // Data geldi, ilgili görünümü güncelle
+    TKG.setInputValue();
+    Slip.syncSummary();
+
+    const hash = window.location.hash;
+    if (hash.includes('/customers')) App.renderCustomersTable();
+    if (hash.includes('/company'))   App.renderCompanyForm();
+  }).catch(err => {
+    console.error('Veri yüklenemedi:', err);
+  });
 });
