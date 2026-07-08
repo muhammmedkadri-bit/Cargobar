@@ -99,6 +99,8 @@ body {
 /* ── View Panes ── */
 .view-pane { display: none; animation: fadeUp 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 .view-pane.active { display: block; }
+/* Login page needs grid layout, not block */
+.view-pane.login-layout.active { display: grid; }
 
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(6px); }
@@ -995,28 +997,7 @@ input[type="number"] { -moz-appearance: textfield; }
   flex-shrink: 0;
 }
 
-/* ═══════════════════════════════════════
-   LOGIN LAYOUT
-═══════════════════════════════════════ */
-.login-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  height: 100vh;
-  width: 100vw;
-  background-color: var(--card);
-  overflow: hidden;
-}
-
-@media (max-width: 900px) {
-  .login-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-    overflow-y: auto;
-  }
-  .login-left {
-    min-height: 50vh;
-  }
-}
+/* Old login-layout block removed — see new faithful recreation below */
 
 .login-left {
   background-color: var(--primary); /* Green #7ed957 */
@@ -1297,9 +1278,9 @@ input[type="number"] { -moz-appearance: textfield; }
    LOGIN PAGE — Full Faithful Recreation
 ═══════════════════════════════════════ */
 
-/* Layout */
-.login-layout {
-  display: grid !important;
+/* Layout: Only show as grid when ACTIVE (view-pane hides by default) */
+.view-pane.login-layout.active {
+  display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 100dvh;
   width: 100%;

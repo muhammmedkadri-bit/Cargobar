@@ -1172,7 +1172,8 @@ const Dock = {
   },
 
   updateActive() {
-    const hash = window.location.hash || '#/slip';
+    // Default to login until auth is verified
+    const hash = window.location.hash || '#/login';
     const map = {
       '#/login':     'view-login',
       '#/slip':      'view-slip',
