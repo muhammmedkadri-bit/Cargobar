@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cargobar - Kargo Fişi Oluştur</title>
+  <meta name="description" content="Kurumsal kargo fişi hazırlama, desi hesaplama ve etiket yazdırma uygulaması.">
+  <link rel="stylesheet" href="index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div id="app-container">
+
+  <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+  <main class="main-content">
+
+    <!-- ─────────── VIEW: KARGO FİŞİ OLUŞTUR ─────────── -->
+    <section id="view-slip" class="view-pane active">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Kargo Fişi Oluştur</h1>
+          <p class="page-subtitle">Alıcı bilgileri ve desi hesaplaması yaparak kargo etiketinizi yazdırın.</p>
+        </div>
+      </div>
+
+      <div class="slip-layout">
+
+        <!-- ─── LEFT COLUMN: Form ─── -->
+        <div>
+
+          <!-- Customer Mode Toggle -->
+          <div class="mode-toggle-group">
+            <label class="mode-card selected" id="mode-new-card" onclick="Slip.setMode('new')">
+              <input type="radio" name="customer-mode" value="new" checked>
+              <div class="mode-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </div>
+              <div>
+                <div class="mode-label">Yeni Müşteri</div>
+                <div class="mode-desc">Bilgileri manuel olarak girin</div>
+              </div>
+              <div class="mode-indicator"></div>
+            </label>
+
+            <label class="mode-card" id="mode-saved-card" onclick="Slip.setMode('saved')">
+              <input type="radio" name="customer-mode" value="saved">
+              <div class="mode-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+              </div>
+              <div>
+                <div class="mode-label">Kayıtlı Müşteri</div>
+                <div class="mode-desc">Listeden seçin, otomatik dolsun</div>
+              </div>
+              <div class="mode-indicator"></div>
+            </label>
+          </div>
+
+          <!-- Kayıtlı müşteri seçiliyken göster -->
+          <div id="saved-customer-select-area" style="display:none; margin-bottom:1rem;">
+            <button class="saved-customer-btn" id="open-customer-picker-btn" onclick="App.openCustomerPicker()">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+              Kayıtlı Müşterileri Listele ve Seç
+            </button>
+            <div id="selected-customer-badge" style="display:none;" class="selected-customer-badge mt-1">
+              <div>
+                <div class="badge-name" id="badge-name-text">—</div>
+                <div class="badge-code" id="badge-code-text">—</div>
+              </div>
+              <button class="badge-clear" onclick="Slip.clearSelectedCustomer()" title="Seçimi Temizle">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- MERGED CARD: Alıcı Bilgileri + Desi -->
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-header">
+              <span class="card-title">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                </svg>
+                Alıcı Bilgileri &amp; Desi Hesaplayıcı
+              </span>
+            </div>
+            <div class="card-body" style="display:grid; grid-template-columns:1fr 1fr; gap:2rem;">
+
+              <!-- Alıcı Form -->
+              <div class="form-stack">
+
+                <div>
+                  <label class="form-label" for="f-unvan">Firma Ünvanı <span class="req">*</span></label>
+                  <input id="f-unvan" type="text" class="form-control" placeholder="Örn: Yılmaz Lojistik Ltd. Şti." oninput="Slip.syncSummary()">
+                </div>
+
+                <div class="form-grid-2">
+                  <div>
+                    <label class="form-label" for="f-ad">Yetkili Adı Soyadı</label>
+                    <input id="f-ad" type="text" class="form-control" placeholder="Opsiyonel" oninput="Slip.syncSummary()">
+                  </div>
+                  <div>
+                    <label class="form-label" for="f-tel">Telefon <span class="req">*</span></label>
+                    <input id="f-tel" type="tel" class="form-control" placeholder="0532 111 22 33" oninput="Slip.syncSummary()">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="form-label" for="f-adres">Teslimat Adresi <span class="req">*</span></label>
+                  <textarea id="f-adres" class="form-control" rows="2" placeholder="Mahalle, cadde, sokak, bina, daire..." oninput="Slip.syncSummary()"></textarea>
+                </div>
+
+                <div class="form-grid-2">
+                  <div>
+                    <label class="form-label" for="f-il">İl <span class="req">*</span></label>
+                    <select id="f-il" class="form-control" onchange="App.handleCityChange('f-il', 'f-ilce')">
+                      <option value="">İl Seçiniz</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="form-label" for="f-ilce">İlçe <span class="req">*</span></label>
+                    <select id="f-ilce" class="form-control" onchange="Slip.syncSummary()" disabled>
+                      <option value="">Önce İl Seçiniz</option>
+                    </select>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Desi Hesaplayıcı -->
+              <div>
+                <div class="form-section-title">Koli Ölçüleri</div>
+                <div class="desi-grid">
+                  <div class="desi-input-wrapper">
+                    <label class="form-label" for="d-en">En</label>
+                    <input id="d-en" type="number" min="1" class="form-control" placeholder="cm" oninput="Slip.calcDesi()">
+                    <span class="desi-unit">santimetre (cm)</span>
+                  </div>
+                  <div class="desi-input-wrapper">
+                    <label class="form-label" for="d-boy">Boy</label>
+                    <input id="d-boy" type="number" min="1" class="form-control" placeholder="cm" oninput="Slip.calcDesi()">
+                    <span class="desi-unit">santimetre (cm)</span>
+                  </div>
+                  <div class="desi-input-wrapper">
+                    <label class="form-label" for="d-yukseklik">Yükseklik</label>
+                    <input id="d-yukseklik" type="number" min="1" class="form-control" placeholder="cm" oninput="Slip.calcDesi()">
+                    <span class="desi-unit">santimetre (cm)</span>
+                  </div>
+                  <div class="desi-input-wrapper">
+                    <label class="form-label" for="d-kilo">Gerçek Ağırlık</label>
+                    <input id="d-kilo" type="number" min="0.1" step="0.1" class="form-control" placeholder="kg" oninput="Slip.calcDesi()">
+                    <span class="desi-unit">kilogram (kg)</span>
+                  </div>
+                </div>
+
+
+                <!-- Result Card -->
+                <div class="desi-result-card" id="desi-result-card">
+                  <div class="desi-result-row">
+                    <span class="desi-result-label">Hacimsel Desi <span style="font-size:0.7rem; opacity:0.65;">(En×Boy×Y / 3000)</span></span>
+                    <span class="desi-result-value highlight" id="res-hacimsel">—</span>
+                  </div>
+                  <div class="desi-result-row">
+                    <span class="desi-result-label">Gerçek Ağırlık</span>
+                    <span class="desi-result-value" id="res-kilo">—</span>
+                  </div>
+                  <div class="desi-result-row" style="border-top:1px solid var(--border); padding-top:0.5rem; margin-top:0.25rem;">
+                    <span class="desi-result-label" style="font-weight:700; color:var(--foreground);">Ücretlendirme Desisi</span>
+                    <span class="desi-result-value" id="res-ucret" style="font-size:1.2rem;">—</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ─── RIGHT COLUMN: Print Options (sticky) ─── -->
+        <div class="print-options-card card">
+          <div class="card-header">
+            <span class="card-title">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0a2.25 2.25 0 01-2.24 2.156H8.58A2.25 2.25 0 016.34 18m11.32 0h-11.32" />
+              </svg>
+              Yazdırma Seçenekleri
+            </span>
+          </div>
+          <div class="card-body">
+
+            <div class="form-section-title">Kargo Kodu (Otomatik)</div>
+            <div class="tkg-row">
+              <input id="tkg-input" type="text" class="form-control font-mono" placeholder="TKG-000001" style="font-size:0.95rem;font-weight:700;letter-spacing:1px;" oninput="Slip.syncSummary()">
+              <button class="btn btn-secondary btn-icon" onclick="Slip.regenerateTKG()" title="Yeni Kod Üret">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+              </button>
+            </div>
+            <p class="text-muted text-small mt-1" style="margin-bottom:1.25rem;">Her yazdırma işleminde otomatik sıralı kod atanır. Manuel değiştirilebilir.</p>
+
+            <div class="form-section-title">Etiket Adeti</div>
+            <div class="copy-count-row" style="margin-bottom:1.25rem;">
+              <button class="btn btn-secondary btn-icon" onclick="Slip.adjustCopies(-1)">−</button>
+              <input id="copy-count" type="number" min="1" max="100" value="1" class="form-control" oninput="Slip.syncSummary()">
+              <button class="btn btn-secondary btn-icon" onclick="Slip.adjustCopies(1)">+</button>
+              <span class="copy-count-label">kopya</span>
+            </div>
+
+            <div class="print-divider"></div>
+
+            <!-- Summary box -->
+            <div class="print-summary" id="print-summary">
+              <span style="color:var(--text-muted);">Form dolduruldukça özet burada görünür.</span>
+            </div>
+
+            <button class="btn btn-primary btn-lg print-btn-main" id="print-main-btn" onclick="Slip.handlePrint()">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0a2.25 2.25 0 01-2.24 2.156H8.58A2.25 2.25 0 016.34 18m11.32 0h-11.32m11.32 0a2.25 2.25 0 002.24-2.156M6.34 18a2.25 2.25 0 01-2.24-2.156M20.25 9.75c0-1.242-1.008-2.25-2.25-2.25H6c-1.242 0-2.25 1.008-2.25 2.25m16.5 0c0 1.242-1.008 2.25-2.25 2.25H6c-1.242 0-2.25-1.008-2.25-2.25m16.5 0V6.75A2.25 2.25 0 0018 4.5H6a2.25 2.25 0 00-2.25 2.25v3" />
+              </svg>
+              Etiketi Yazdır
+            </button>
+
+          </div>
+        </div>
+
+      </div><!-- /slip-layout -->
+    </section>
+
+    <!-- ─────────── VIEW: MÜŞTERİLER ─────────── -->
+    <section id="view-customers" class="view-pane">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Müşterilerim</h1>
+          <p class="page-subtitle">Kayıtlı müşteri ünvan, iletişim ve adres bilgilerini yönetin.</p>
+        </div>
+        <button class="btn btn-primary" onclick="App.openCustomerModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Yeni Müşteri Ekle
+        </button>
+      </div>
+
+      <div class="search-bar">
+        <div class="input-with-icon" style="flex-grow:1;">
+          <span class="icon">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+          </span>
+          <input type="text" id="customer-search" class="form-control" placeholder="Ünvan, yetkili, telefon veya şehir ile ara..." oninput="App.filterCustomers()">
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:110px;">Kod</th>
+              <th>Ünvan / Firma</th>
+              <th>Yetkili</th>
+              <th>Telefon</th>
+              <th>Şehir</th>
+              <th style="width:130px; text-align:center;">İşlem</th>
+            </tr>
+          </thead>
+          <tbody id="customers-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ─────────── VIEW: ŞİRKET BİLGİLERİM ─────────── -->
+    <section id="view-company" class="view-pane">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Şirket Bilgilerim</h1>
+          <p class="page-subtitle">Gönderici bilgileri ve logo kargo etiketlerinizde otomatik görünür.</p>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 360px; gap:1.5rem; align-items:start;">
+
+        <!-- Form Card -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+              </svg>
+              Firma Bilgileri
+            </span>
+          </div>
+          <div class="card-body">
+            <div class="form-stack">
+
+              <div>
+                <label class="form-label" for="cp-unvan">Firma Ünvanı <span class="req">*</span></label>
+                <input id="cp-unvan" type="text" class="form-control" placeholder="Örn: Yılmaz Lojistik Ltd. Şti.">
+              </div>
+
+              <div>
+                <label class="form-label" for="cp-slogan">Slogan / Alt Başlık</label>
+                <input id="cp-slogan" type="text" class="form-control" placeholder="Etikette şirket adının altında görünür">
+                <p class="text-muted text-small mt-1">Boş bırakılırsa etikette sadece şirket adı görünür.</p>
+              </div>
+
+              <div>
+                <label class="form-label" for="cp-tel">Şirket Telefonu</label>
+                <input id="cp-tel" type="text" class="form-control" placeholder="Örn: 02121234567">
+              </div>
+
+              <div>
+                <label class="form-label" for="cp-adres">Şirket Adresi</label>
+                <textarea id="cp-adres" class="form-control" rows="2" placeholder="Mahalle, cadde, sokak, bina..."></textarea>
+              </div>
+
+              <div class="form-grid-2">
+                <div>
+                  <label class="form-label" for="cp-il">İl</label>
+                  <select id="cp-il" class="form-control" onchange="App.handleCityChange('cp-il', 'cp-ilce')">
+                    <option value="">İl Seçiniz</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label" for="cp-ilce">İlçe</label>
+                  <select id="cp-ilce" class="form-control" disabled>
+                    <option value="">Önce İl Seçiniz</option>
+                  </select>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          <div class="card-footer" style="display:flex; justify-content:flex-end;">
+            <button id="cp-save-btn" class="btn btn-primary" onclick="App.saveCompanySettings()">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:16px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.046 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.14.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+              </svg>
+              Bilgileri Kaydet
+            </button>
+          </div>
+        </div>
+
+        <!-- Logo & Info Column -->
+        <div style="display:flex; flex-direction:column; gap:1.25rem;">
+
+          <!-- Logo Upload -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                </svg>
+                Şirket Logosu
+              </span>
+            </div>
+            <div class="card-body">
+              <!-- Preview -->
+              <div id="cp-logo-preview-wrap" style="margin-bottom:1rem; min-height:72px; display:flex; align-items:center; justify-content:center; background:var(--muted); border-radius:var(--radius-sm); border:1.5px dashed var(--border); padding:1rem;">
+                <img id="cp-logo-preview" src="" alt="Logo" style="max-height:60px; max-width:220px; object-fit:contain; display:none; border-radius:var(--radius-xs);">
+                <span id="cp-logo-empty" style="color:var(--text-muted); font-size:0.82rem; display:flex; align-items:center; gap:0.4rem;">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;opacity:0.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5M3.75 3h16.5a1.5 1.5 0 011.5 1.5v9a1.5 1.5 0 01-1.5 1.5H3.75a1.5 1.5 0 01-1.5-1.5v-9A1.5 1.5 0 013.75 3z" /></svg>
+                  Logo henüz yüklenmedi
+                </span>
+              </div>
+
+              <label class="btn btn-secondary btn-full" style="cursor:pointer; margin-bottom:0.5rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:16px;">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+                Logo Yükle
+                <input id="cp-logo-input" type="file" accept="image/*" style="display:none" onchange="App.handleLogoUpload(this)">
+              </label>
+
+              <button class="btn btn-ghost btn-full" onclick="App.removeCompanyLogo()" style="font-size:0.82rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:15px;">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Logoyu Kaldır
+              </button>
+
+              <p class="text-muted text-small mt-2" style="text-align:center;">PNG, JPG, SVG — maks. 2 MB</p>
+            </div>
+          </div>
+
+          <!-- Info Card -->
+          <div class="card" style="border-color:rgba(99,102,241,0.2);">
+            <div class="card-body" style="background:rgba(99,102,241,0.03); font-size:0.82rem; color:var(--muted-foreground); line-height:1.7;">
+              <p style="font-weight:700; color:var(--accent); margin-bottom:0.6rem; display:flex; align-items:center; gap:0.4rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+                Etikette Nasıl Görünür?
+              </p>
+              <ul style="padding-left:1rem; display:flex; flex-direction:column; gap:0.3rem; list-style:disc;">
+                <li><strong style="color:var(--foreground);">Sol üst</strong>: Logo (varsa) veya Firma Ünvanı</li>
+                <li><strong style="color:var(--foreground);">Alt satır</strong>: Slogan (varsa)</li>
+                <li><strong style="color:var(--foreground);">Gönderici</strong>: Firma adı + Adres</li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODAL: Kayıtlı Müşteri Seçimi
+═══════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-customer-picker">
+  <div class="modal-box modal-lg">
+    <div class="modal-head">
+      <span class="modal-head-title">Kayıtlı Müşteri Seç</span>
+      <button class="modal-close-btn" onclick="App.closeModal('modal-customer-picker')">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="cust-search-wrap">
+        <div class="input-with-icon">
+          <span class="icon">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+          </span>
+          <input type="text" id="picker-search" class="form-control" placeholder="Müşteri adı veya ünvan ile ara..." oninput="App.filterPickerList()">
+        </div>
+      </div>
+      <ul class="cust-list" id="picker-list"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODAL: Müşteri Kaydet / Kaydetme
+═══════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-save-prompt">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-body" style="padding: 2rem 1.75rem; text-align:center;">
+      <div class="save-prompt-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:26px; color:var(--primary);">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+        </svg>
+      </div>
+      <h3 style="font-weight:700; font-size:1.1rem; margin-bottom:0.65rem;">Müşteriyi Kaydet?</h3>
+      <p class="save-prompt-text">
+        <span class="save-prompt-name" id="save-prompt-name"></span><br>
+        isimli yeni müşteriyi müşteri listenize kaydetmek ister misiniz?<br>
+        <span style="font-size:0.8rem; opacity:0.7; margin-top:0.4rem; display:block;">Kaydetmezseniz bu bilgiler sadece bu fiş için kullanılır.</span>
+      </p>
+    </div>
+    <div class="modal-foot" style="justify-content:center; gap:0.75rem; padding:1.25rem;">
+      <button class="btn btn-secondary" style="min-width:130px;" onclick="App.handleSavePrompt(false)">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        Kaydetme, Yazdır
+      </button>
+      <button class="btn btn-primary" style="min-width:130px;" onclick="App.handleSavePrompt(true)">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+        Kaydet ve Yazdır
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODAL: Müşteri Ekle / Düzenle
+═══════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-customer-form">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="modal-head-title" id="cust-modal-title">Yeni Müşteri Ekle</span>
+      <button class="modal-close-btn" onclick="App.closeModal('modal-customer-form')">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form id="cust-form" onsubmit="App.handleCustomerSubmit(event)">
+      <input type="hidden" id="cust-form-id">
+      <div class="modal-body">
+        <div class="cust-form-grid">
+          <div>
+            <label class="form-label" for="cf-unvan">Firma Ünvanı <span class="req">*</span></label>
+            <input id="cf-unvan" type="text" class="form-control" required placeholder="Örn: Yılmaz Lojistik Ltd. Şti.">
+          </div>
+          <div class="form-grid-2">
+            <div>
+              <label class="form-label" for="cf-ad">Yetkili Ad Soyad</label>
+              <input id="cf-ad" type="text" class="form-control" placeholder="Ahmet Yılmaz">
+            </div>
+            <div>
+              <label class="form-label" for="cf-tel">Telefon <span class="req">*</span></label>
+              <input id="cf-tel" type="text" class="form-control" required placeholder="05321234567">
+            </div>
+          </div>
+          <div>
+            <label class="form-label" for="cf-adres">Adres <span class="req">*</span></label>
+            <textarea id="cf-adres" class="form-control" rows="3" required placeholder="Mahalle, cadde, sokak, bina/daire..."></textarea>
+          </div>
+          <div class="form-grid-2">
+            <div>
+              <label class="form-label" for="cf-il">İl <span class="req">*</span></label>
+              <select id="cf-il" class="form-control" onchange="App.handleCityChange('cf-il', 'cf-ilce')">
+                <option value="">İl Seçiniz</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label" for="cf-ilce">İlçe <span class="req">*</span></label>
+              <select id="cf-ilce" class="form-control" disabled>
+                <option value="">Önce İl Seçiniz</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="form-label" for="cf-kod">Müşteri Kodu <span style="font-weight:400; color:var(--text-muted);">(opsiyonel)</span></label>
+            <input id="cf-kod" type="text" class="form-control" placeholder="Boş bırakırsanız otomatik atanır">
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" onclick="App.closeModal('modal-customer-form')">Vazgeç</button>
+        <button type="submit" class="btn btn-primary" id="cust-form-submit">Kaydet</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODAL: Generic Alert
+═══════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-alert">
+  <div class="modal-box" style="max-width:380px;">
+    <div class="modal-body" style="padding: 2rem 1.75rem; text-align:center;">
+      <div style="width: 48px; height: 48px; background: var(--amber-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto; color: var(--amber);">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+      <h3 style="font-weight:700; font-size:1.15rem; margin-bottom:0.75rem; color: var(--text-main);" id="modal-alert-title">Uyarı</h3>
+      <p style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;" id="modal-alert-message"></p>
+    </div>
+    <div class="modal-foot" style="justify-content:center; padding: 1.25rem;">
+      <button class="btn btn-primary" style="min-width:120px;" onclick="App.closeModal('modal-alert')">Anladım</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PRINT AREA (hidden on screen)
+═══════════════════════════════════════ -->
+<div id="print-area"></div>
+
+<!-- ═══════════════════════════════════════
+     DOCK
+═══════════════════════════════════════ -->
+<div class="dock-wrapper" id="dock-wrapper">
+  <div class="dock-panel" id="dock-panel">
+
+    <button class="dock-item" id="dock-slip" onclick="Dock.navigate('#/slip')" title="Kargo Fişi Oluştur">
+      <div class="dock-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+        </svg>
+      </div>
+      <span class="dock-label">Kargo Fişi</span>
+    </button>
+
+    <div class="dock-divider"></div>
+
+    <button class="dock-item" id="dock-customers" onclick="Dock.navigate('#/customers')" title="Müşterilerim">
+      <div class="dock-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+        </svg>
+      </div>
+      <span class="dock-label">Müşteriler</span>
+    </button>
+
+    <div class="dock-divider"></div>
+
+    <button class="dock-item" id="dock-company" onclick="Dock.navigate('#/company')" title="Şirket Bilgilerim">
+      <div class="dock-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+        </svg>
+      </div>
+      <span class="dock-label">Şirket</span>
+    </button>
+
+  </div>
+</div>
+
+<!-- CDN Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<!-- App Scripts -->
+<script src="mock_data.js"></script>
+<script src="./data.js"></script>
+<script src="./app.js"></script>
+
+</body>
+</html>
