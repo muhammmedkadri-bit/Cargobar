@@ -7,9 +7,9 @@
 ──────────────────────────────────────── */
 const supabaseUrl = 'https://wtpijizimadhxcwidrqo.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0cGlqaXppbWFkaHhjd2lkcnFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1Mjk0MTQsImV4cCI6MjA5OTEwNTQxNH0.SyYjzqdmwyhdGKcaB5KTo_xAjbsrpPeKBXZ5WeKcCGc';
-let supabase = null;
+let _db = null;
 try {
-  supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+  _db = window.supabase.createClient(supabaseUrl, supabaseKey);
 } catch(e) {
   console.error('Supabase SDK yüklenemedi, localStorage modunda çalışılıyor.', e);
 }
@@ -49,7 +49,7 @@ const Store = {
     State.tkg_counter = parseInt(localStorage.getItem('cb_tkg_counter') || '1', 10);
     State.print_count = parseInt(localStorage.getItem('cb_print_count') || '0', 10);
 
-    if (!supabase) {
+    if (!_db) {
       // Fallback to localStorage
       const raw = localStorage.getItem('cb_customers');
       State.customers = raw ? JSON.parse(raw) : [...window.MOCK_CUSTOMERS];
@@ -60,14 +60,14 @@ const Store = {
 
     // Fetch from Supabase
     try {
-      const { data: custData, error: custErr } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
+      const { data: custData, error: custErr } = await _db.from('customers').select('*').order('created_at', { ascending: false });
       if (!custErr && custData) {
         State.customers = custData;
       } else {
         State.customers = [...window.MOCK_CUSTOMERS];
       }
 
-      const { data: compData, error: compErr } = await supabase.from('company').select('*').eq('id', 1).single();
+      const { data: compData, error: compErr } = await _db.from('company').select('*').eq('id', 1).single();
       if (!compErr && compData) {
         State.company = { ...State.company, ...compData };
       }
@@ -79,7 +79,7 @@ const Store = {
   },
   
   async saveCustomer(customer) {
-    if (!supabase) {
+    if (!_db) {
       // Fallback
       const idx = State.customers.findIndex(c => c.id === customer.id);
       if (idx === -1) State.customers.push(customer);
@@ -87,17 +87,17 @@ const Store = {
       localStorage.setItem('cb_customers', JSON.stringify(State.customers));
       return;
     }
-    const { error } = await supabase.from('customers').upsert(customer);
+    const { error } = await _db.from('customers').upsert(customer);
     if (error) console.error("Error saving customer:", error);
   },
 
   async deleteCustomer(id) {
-    if (!supabase) {
+    if (!_db) {
       State.customers = State.customers.filter(c => c.id !== id);
       localStorage.setItem('cb_customers', JSON.stringify(State.customers));
       return;
     }
-    const { error } = await supabase.from('customers').delete().eq('id', id);
+    const { error } = await _db.from('customers').delete().eq('id', id);
     if (error) console.error("Error deleting customer:", error);
   },
 
@@ -109,11 +109,11 @@ const Store = {
   },
   
   async saveCompany() {
-    if (!supabase) {
+    if (!_db) {
       localStorage.setItem('cb_company', JSON.stringify(State.company));
       return;
     }
-    const { error } = await supabase.from('company').upsert({ id: 1, ...State.company });
+    const { error } = await _db.from('company').upsert({ id: 1, ...State.company });
     if (error) console.error("Error saving company:", error);
   },
 };
