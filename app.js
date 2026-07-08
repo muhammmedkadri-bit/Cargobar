@@ -1272,5 +1272,263 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
   
+  // Expose Router to window so LoginPage can use it
+  window.Router = Router;
+
   checkAuthAndLoad();
+  LoginPage.init();
 });
+
+/* ────────────────────────────────────────
+   LOGIN PAGE — Vanilla JS Module
+   (Full faithful recreation of Login.jsx)
+──────────────────────────────────────── */
+const LoginPage = {
+  mouse: { x: 0, y: 0 },
+  state: {
+    purpleBlinking: false,
+    blackBlinking:  false,
+    isTyping:       false,
+    pwFocused:      false,
+    pwValue:        '',
+    pwVisible:      false,
+  },
+
+  init() {
+    // Global mouse move (RAF throttled)
+    let ticking = false;
+    window.addEventListener('mousemove', (e) => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          this.mouse.x = e.clientX;
+          this.mouse.y = e.clientY;
+          this.updateEyes();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    });
+
+    // Blink schedulers
+    this._schedBlink('purple');
+    this._schedBlink('black');
+  },
+
+  _schedBlink(which) {
+    const key = which === 'purple' ? 'purpleBlinking' : 'blackBlinking';
+    const delay = Math.random() * 4000 + 3000;
+    setTimeout(() => {
+      this.state[key] = true;
+      this.updateEyes();
+      setTimeout(() => {
+        this.state[key] = false;
+        this.updateEyes();
+        this._schedBlink(which);
+      }, 150);
+    }, delay);
+  },
+
+  /* Eye position calculation */
+  _calcPupilOffset(el, maxDist) {
+    if (!el) return { x: 0, y: 0 };
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const dx = this.mouse.x - cx;
+    const dy = this.mouse.y - cy;
+    const dist = Math.min(Math.sqrt(dx * dx + dy * dy), maxDist);
+    const angle = Math.atan2(dy, dx);
+    return { x: Math.cos(angle) * dist, y: Math.sin(angle) * dist };
+  },
+
+  _setEye(id, pupilId, opts) {
+    const eye = document.getElementById(id);
+    const pupil = document.getElementById(pupilId);
+    if (!eye || !pupil) return;
+
+    if (opts.blink) {
+      eye.style.height = '2px';
+    } else {
+      eye.style.height = '';
+    }
+
+    if (opts.forcePupil) {
+      pupil.style.transform = `translate(${opts.forcePupil.x}px, ${opts.forcePupil.y}px)`;
+    } else {
+      const pos = this._calcPupilOffset(eye, opts.maxDist || 5);
+      pupil.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+    }
+  },
+
+  updateEyes() {
+    const { purpleBlinking, blackBlinking, isTyping, pwFocused, pwValue, pwVisible } = this.state;
+    const shouldClose   = pwFocused && !pwVisible;
+    const pwHidden      = pwValue && pwValue.length > 0 && !pwVisible;
+    const pwVisibleMode = pwValue && pwValue.length > 0 && pwVisible;
+
+    const purpleBlink = purpleBlinking || shouldClose;
+    const blackBlink  = blackBlinking  || shouldClose;
+    const otherClose  = shouldClose;
+
+    // Purple eyes
+    const pForce = pwVisibleMode ? { x: -4, y: -4 } : isTyping ? { x: 3, y: 4 } : null;
+    this._setEye('ep1', 'ep1p', { blink: purpleBlink, forcePupil: pForce, maxDist: 5 });
+    this._setEye('ep2', 'ep2p', { blink: purpleBlink, forcePupil: pForce, maxDist: 5 });
+
+    // Purple character lean when typing / pw hidden
+    const purple = document.getElementById('char-purple');
+    if (purple) {
+      if (pwVisibleMode) {
+        purple.style.transform = 'skewX(0deg)';
+        purple.style.height = '360px';
+      } else if (pwHidden || isTyping) {
+        purple.style.transform = 'skewX(-12deg) translateX(40px)';
+        purple.style.height = '400px';
+      } else {
+        purple.style.transform = '';
+        purple.style.height = '360px';
+      }
+    }
+
+    // Black eyes
+    const bForce = pwVisibleMode ? { x: -4, y: -4 } : isTyping ? { x: 0, y: -4 } : null;
+    this._setEye('eb1', 'eb1p', { blink: blackBlink, forcePupil: bForce, maxDist: 4 });
+    this._setEye('eb2', 'eb2p', { blink: blackBlink, forcePupil: bForce, maxDist: 4 });
+
+    // Black lean when typing
+    const black = document.getElementById('char-black');
+    if (black) {
+      if (pwVisibleMode) {
+        black.style.transform = 'skewX(0deg)';
+      } else if (isTyping || pwHidden) {
+        black.style.transform = 'skewX(15deg) translateX(20px)';
+      } else {
+        black.style.transform = '';
+      }
+    }
+
+    // Orange eyes
+    const oForce = pwVisibleMode ? { x: -5, y: -4 } : null;
+    this._setEye('eo1', 'eo1p', { blink: otherClose, forcePupil: oForce, maxDist: 3 });
+    this._setEye('eo2', 'eo2p', { blink: otherClose, forcePupil: oForce, maxDist: 3 });
+
+    // Yellow eyes
+    const yForce = pwVisibleMode ? { x: -5, y: -4 } : null;
+    this._setEye('ey1', 'ey1p', { blink: otherClose, forcePupil: yForce, maxDist: 3 });
+    this._setEye('ey2', 'ey2p', { blink: otherClose, forcePupil: yForce, maxDist: 3 });
+  },
+
+  /* Form event handlers */
+  onEmailFocus()    { this.state.isTyping = true;   this.updateEyes(); },
+  onEmailBlur()     { this.state.isTyping = false;  this.updateEyes(); },
+  onPasswordFocus() { this.state.pwFocused = true;  this.updateEyes(); },
+  onPasswordBlur()  { this.state.pwFocused = false; this.updateEyes(); },
+  onPasswordInput() {
+    this.state.pwValue = document.getElementById('login-password')?.value || '';
+    this.updateEyes();
+  },
+
+  togglePassword() {
+    const inp = document.getElementById('login-password');
+    const showIcon = document.getElementById('eye-icon-show');
+    const hideIcon = document.getElementById('eye-icon-hide');
+    if (!inp) return;
+    const visible = inp.type === 'text';
+    inp.type = visible ? 'password' : 'text';
+    showIcon.style.display = visible ? '' : 'none';
+    hideIcon.style.display = visible ? 'none' : '';
+    this.state.pwVisible = !visible;
+    this.updateEyes();
+  },
+
+  /* Forgot Password */
+  showForgot() {
+    const m = document.getElementById('forgot-modal');
+    if (m) { m.style.display = 'flex'; document.getElementById('forgot-email').value = ''; this._resetForgotStatus(); }
+  },
+
+  hideForgot() {
+    const m = document.getElementById('forgot-modal');
+    if (m) m.style.display = 'none';
+  },
+
+  closeForgotOnOverlay(e) {
+    if (e.target === document.getElementById('forgot-modal')) this.hideForgot();
+  },
+
+  _resetForgotStatus() {
+    document.getElementById('forgot-success').style.display = 'none';
+    document.getElementById('forgot-notfound').style.display = 'none';
+  },
+
+  searchForgot() {
+    const email = document.getElementById('forgot-email')?.value?.trim();
+    if (!email) return;
+    const btn = document.getElementById('forgot-search-btn');
+    btn.disabled = true;
+    btn.textContent = 'Sorgulanıyor...';
+    this._resetForgotStatus();
+
+    // Always show "request received" for security (never reveal if email exists)
+    setTimeout(() => {
+      document.getElementById('forgot-success').style.display = 'flex';
+      btn.disabled = false;
+      btn.textContent = 'Sorgula';
+    }, 800);
+  },
+
+  /* Form Submit */
+  async handleSubmit(e) {
+    e.preventDefault();
+    const email    = document.getElementById('login-email')?.value?.trim();
+    const password = document.getElementById('login-password')?.value;
+    const errorEl  = document.getElementById('login-error');
+    const btn      = document.getElementById('login-submit-btn');
+
+    // Validate
+    let valid = true;
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      document.getElementById('email-error').textContent = 'Geçerli bir e-posta giriniz.';
+      document.getElementById('email-error').style.display = 'block';
+      document.getElementById('login-email').classList.add('error');
+      valid = false;
+    } else {
+      document.getElementById('email-error').style.display = 'none';
+      document.getElementById('login-email').classList.remove('error');
+    }
+    if (!password) {
+      document.getElementById('password-error').textContent = 'Şifre zorunludur.';
+      document.getElementById('password-error').style.display = 'block';
+      document.getElementById('login-password').classList.add('error');
+      valid = false;
+    } else {
+      document.getElementById('password-error').style.display = 'none';
+      document.getElementById('login-password').classList.remove('error');
+    }
+    if (!valid) return;
+
+    errorEl.style.display = 'none';
+    const origHTML = btn.innerHTML;
+    btn.innerHTML = '<svg class="lp-spin" style="width:18px;height:18px;margin-right:6px" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" style="opacity:.25"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" style="opacity:.75"/></svg>Giriş yapılıyor...';
+    btn.disabled = true;
+
+    try {
+      if (!_db) throw new Error('Sunucu bağlantısı kurulamadı.');
+      const { data, error } = await _db.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      State.session = data.session;
+      window.Router.navigate('#/slip');
+    } catch (err) {
+      errorEl.textContent = err.message === 'Invalid login credentials'
+        ? 'E-posta veya şifre hatalı. Lütfen tekrar deneyiniz.'
+        : (err.message || 'Giriş başarısız.');
+      errorEl.style.display = 'block';
+    } finally {
+      btn.innerHTML = origHTML;
+      btn.disabled = false;
+    }
+  }
+};
+
+window.LoginPage = LoginPage;
+

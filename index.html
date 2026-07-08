@@ -23,70 +23,153 @@
       <div class="login-left">
         <img src="logo.png" alt="Entrio Logo" class="login-logo">
         <div class="login-left-content">
-          <h1 class="login-slogan">Kargo ve etiketlemede <span class="neon-highlight">hızlı</span> deneyim</h1>
-          <p class="login-subtext">Kargo etiketleme - Ürün etiketleme - Raf etiketleme - Müşteri Kargo Kodu Takip ve daha fazlası tek platformda</p>
-        </div>
-        
-        <!-- Animated Blobs -->
-        <div class="login-chars">
-          <div class="blob blob-purple">
-            <div class="blob-eyes"><div class="blob-eye"></div><div class="blob-eye"></div></div>
+          <!-- Slogan -->
+          <div class="login-slogan-wrap">
+            <h2 class="login-slogan">
+              Kargo ve etiketlemede
+              <span class="login-neon">
+                hızlı
+                <svg class="chalk-underline" viewBox="0 0 100 10" preserveAspectRatio="none">
+                  <path d="M2,8 C25,3 75,2 98,6" stroke="#ffffff" stroke-width="2.5" fill="none" stroke-linecap="round" style="filter:drop-shadow(0 2px 4px rgba(255,255,255,0.8))"/>
+                </svg>
+              </span>
+              deneyim
+            </h2>
+            <p class="login-subtext">Kargo etiketleme · Ürün etiketleme · Raf etiketleme · Müşteri Kargo Kodu Takip ve daha fazlası tek platformda</p>
           </div>
-          <div class="blob blob-black">
-            <div class="blob-eyes"><div class="blob-eye"></div><div class="blob-eye"></div></div>
-          </div>
-          <div class="blob blob-orange">
-            <div class="blob-eyes"><div class="blob-eye"></div><div class="blob-eye"></div></div>
-          </div>
-          <div class="blob blob-yellow">
-            <div class="blob-eyes"><div class="blob-eye"></div><div class="blob-eye"></div></div>
+
+          <!-- Characters Container -->
+          <div class="login-chars-container">
+            <div class="login-chars-inner">
+
+              <!-- Purple tall character -->
+              <div id="char-purple" class="lc lc-purple">
+                <div id="eyes-purple" class="lc-eyes">
+                  <div class="lc-eye" id="ep1"><div class="lc-pupil" id="ep1p"></div></div>
+                  <div class="lc-eye" id="ep2"><div class="lc-pupil" id="ep2p"></div></div>
+                </div>
+              </div>
+
+              <!-- Black tall character -->
+              <div id="char-black" class="lc lc-black">
+                <div id="eyes-black" class="lc-eyes">
+                  <div class="lc-eye lc-eye-sm" id="eb1"><div class="lc-pupil lc-pupil-sm" id="eb1p"></div></div>
+                  <div class="lc-eye lc-eye-sm" id="eb2"><div class="lc-pupil lc-pupil-sm" id="eb2p"></div></div>
+                </div>
+              </div>
+
+              <!-- Orange semi-circle character -->
+              <div id="char-orange" class="lc lc-orange">
+                <div id="eyes-orange" class="lc-eyes">
+                  <div class="lc-eye lc-eye-sm" id="eo1"><div class="lc-pupil lc-pupil-sm" id="eo1p"></div></div>
+                  <div class="lc-eye lc-eye-sm" id="eo2"><div class="lc-pupil lc-pupil-sm" id="eo2p"></div></div>
+                </div>
+              </div>
+
+              <!-- Yellow rounded character -->
+              <div id="char-yellow" class="lc lc-yellow">
+                <div id="eyes-yellow" class="lc-eyes">
+                  <div class="lc-eye lc-eye-sm" id="ey1"><div class="lc-pupil lc-pupil-sm" id="ey1p"></div></div>
+                  <div class="lc-eye lc-eye-sm" id="ey2"><div class="lc-pupil lc-pupil-sm" id="ey2p"></div></div>
+                </div>
+                <div class="lc-mouth" id="yellow-mouth"></div>
+              </div>
+
+            </div>
           </div>
         </div>
 
         <div class="login-footer">
-          <a href="#">Gizlilik Politikası</a>
-          <a href="#">Kullanım Koşulları</a>
+          <span>Gizlilik Politikası</span>
+          <span>Kullanım Koşulları</span>
           <span>© 2026 Entrio Kargo</span>
         </div>
       </div>
 
       <!-- Right Column -->
       <div class="login-right">
-        <div class="login-form-container">
+        <!-- Mobile logo (hidden on desktop) -->
+        <div class="login-mobile-logo">
+          <img src="logo.png" alt="Entrio">
+        </div>
+
+        <div class="login-form-box">
           <div class="login-header">
-            <h2>Hoş Geldiniz!</h2>
+            <h1>Hoş Geldiniz!</h1>
             <p>Devam etmek için bilgilerinizi giriniz.</p>
           </div>
-          <form id="login-form" onsubmit="App.handleLogin(event)">
-            <div class="login-input-group">
-              <label for="login-email">E-posta</label>
-              <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              <input type="email" id="login-email" class="form-control" placeholder="ornek@sirket.com" required>
-            </div>
-            
-            <div class="login-input-group">
-              <label for="login-password">Şifre</label>
-              <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+
+          <form id="login-form" onsubmit="LoginPage.handleSubmit(event)" novalidate>
+            <!-- Email -->
+            <div class="lf-group">
+              <label class="lf-label" for="login-email">E-posta</label>
+              <div class="lf-input-wrap">
+                <svg class="lf-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <input type="email" id="login-email" class="lf-input" placeholder="ornek@sirket.com" autocomplete="email"
+                  onfocus="LoginPage.onEmailFocus()" onblur="LoginPage.onEmailBlur()" required>
+              </div>
+              <p class="lf-error" id="email-error" style="display:none"></p>
             </div>
 
-            <a href="#" class="login-forgot">Şifremi unuttum →</a>
+            <!-- Password -->
+            <div class="lf-group">
+              <label class="lf-label" for="login-password">Şifre</label>
+              <div class="lf-input-wrap">
+                <svg class="lf-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                <input type="password" id="login-password" class="lf-input lf-input-pass" placeholder="••••••••"
+                  onfocus="LoginPage.onPasswordFocus()" onblur="LoginPage.onPasswordBlur()"
+                  oninput="LoginPage.onPasswordInput()" required>
+                <button type="button" class="lf-eye-btn" id="pw-toggle" onclick="LoginPage.togglePassword()">
+                  <svg id="eye-icon-show" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  <svg id="eye-icon-hide" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;display:none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                </button>
+              </div>
+              <p class="lf-error" id="password-error" style="display:none"></p>
+            </div>
 
-            <button type="submit" class="btn btn-primary login-btn">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px;">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-              </svg>
+            <!-- Forgot -->
+            <div style="display:flex;justify-content:flex-end;margin-bottom:1.25rem;">
+              <button type="button" class="lf-forgot" onclick="LoginPage.showForgot()">Şifremi unuttum →</button>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" id="login-submit-btn" class="lf-submit-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
               Giriş Yap
             </button>
-            <div id="login-error" style="color:var(--red); font-size:0.85rem; text-align:center; margin-top:1rem; display:none;"></div>
+            <div id="login-error" style="color:#ef4444;font-size:0.82rem;text-align:center;margin-top:1rem;display:none;font-weight:500;"></div>
           </form>
         </div>
       </div>
     </section>
+
+    <!-- ─── Forgot Password Modal ─── -->
+    <div id="forgot-modal" class="fp-overlay" style="display:none;" onclick="LoginPage.closeForgotOnOverlay(event)">
+      <div class="fp-box">
+        <div class="fp-head">
+          <div class="fp-icon-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:20px;height:20px;color:#5da83f;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          </div>
+          <div>
+            <h3 class="fp-title">Şifremi Unuttum</h3>
+            <p class="fp-subtitle">Hesabınıza ait e-posta adresini girin.</p>
+          </div>
+        </div>
+        <div class="fp-input-wrap">
+          <svg class="fp-input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <input type="email" id="forgot-email" class="fp-input" placeholder="kayitli@email.com">
+        </div>
+        <div id="forgot-success" class="fp-success" style="display:none;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:20px;height:20px;color:#22c55e;flex-shrink:0;margin-top:2px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <div><p style="font-size:0.85rem;font-weight:700;color:#166534;">Talebiniz Alındı</p><p style="font-size:0.75rem;color:#15803d;margin-top:2px;">Şifre sıfırlama talimatları e-posta adresinize gönderilecektir. Sorun yaşarsanız yöneticinizle iletişime geçin.</p></div>
+        </div>
+        <div id="forgot-notfound" class="fp-notfound" style="display:none;">Bu e-posta adresiyle eşleşen bir hesap bulunamadı.</div>
+        <div class="fp-footer">
+          <button class="fp-btn-cancel" onclick="LoginPage.hideForgot()">Kapat</button>
+          <button class="fp-btn-search" id="forgot-search-btn" onclick="LoginPage.searchForgot()">Sorgula</button>
+        </div>
+      </div>
+    </div>
 
     <!-- ─────────── VIEW: KARGO FİŞİ OLUŞTUR ─────────── -->
     <section id="view-slip" class="view-pane active">
