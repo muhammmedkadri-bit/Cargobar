@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cargobar - Kargo Fişi Oluştur</title>
+  <title>Entrio Kargo</title>
+  <link rel="icon" type="image/png" href="favicon.png">
   <meta name="description" content="Kurumsal kargo fişi hazırlama, desi hesaplama ve etiket yazdırma uygulaması.">
   <link rel="stylesheet" href="index.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -747,6 +748,16 @@
         </svg>
       </div>
       <span class="dock-label">Şirket</span>
+    </button>
+    <div class="dock-divider"></div>
+
+    <button class="dock-item" id="dock-logout" onclick="App.logout()" title="Çıkış Yap">
+      <div class="dock-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+        </svg>
+      </div>
+      <span class="dock-label">Çıkış Yap</span>
     </button>
 
   </div>

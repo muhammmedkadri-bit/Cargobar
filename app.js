@@ -182,6 +182,14 @@ const Router = {
     document.getElementById(views[viewKey])?.classList.add('active');
     document.getElementById(menus[viewKey])?.classList.add('active');
 
+    const titles = {
+      '#/login': 'Entrio Kargo | Giriş',
+      '#/slip': 'Entrio Kargo | Kargo Fişi Oluştur',
+      '#/customers': 'Entrio Kargo | Müşteriler',
+      '#/company': 'Entrio Kargo | Şirket'
+    };
+    document.title = titles[viewKey] || 'Entrio Kargo';
+
     if (viewKey === '#/customers') App.renderCustomersTable();
     if (viewKey === '#/company') App.renderCompanyForm();
     
@@ -645,6 +653,13 @@ const App = {
   },
   closeModal(id) {
     document.getElementById(id)?.classList.remove('open');
+  },
+  async logout() {
+    if (window._db) {
+      await _db.auth.signOut();
+    }
+    State.session = null;
+    Router.navigate('#/login');
   },
 
   initCities() {
