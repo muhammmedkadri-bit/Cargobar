@@ -141,13 +141,10 @@ const TKG = {
    ROUTING
 ──────────────────────────────────────── */
 const Router = {
+  authLoaded: false,
   init() {
-    // Guard: set isPrinting BEFORE the print dialog opens (beforeprint) and clear it AFTER (afterprint).
-    // window.print() returns synchronously in Chrome, but hashchange can fire async after the
-    // dialog closes. Using beforeprint/afterprint events gives us the correct async window.
     window.addEventListener('beforeprint', () => { State.isPrinting = true; });
     window.addEventListener('afterprint',  () => {
-      // Keep the guard up for 300ms after dialog closes to catch any trailing hashchange
       setTimeout(() => { State.isPrinting = false; }, 300);
     });
 
@@ -157,22 +154,39 @@ const Router = {
     });
     this.route();
   },
+  navigate(hash) {
+    window.location.hash = hash;
+  },
   route() {
-    const hash = window.location.hash || '#/slip';
-    const views = { '#/slip': 'view-slip', '#/customers': 'view-customers', '#/company': 'view-company' };
+    let hash = window.location.hash || '#/login';
+
+    // Auth guard
+    if (this.authLoaded) {
+      if (!State.session && hash !== '#/login') {
+        this.navigate('#/login');
+        return;
+      }
+      if (State.session && hash === '#/login') {
+        this.navigate('#/slip');
+        return;
+      }
+    }
+
+    const views = { '#/login': 'view-login', '#/slip': 'view-slip', '#/customers': 'view-customers', '#/company': 'view-company' };
     const menus = { '#/slip': 'menu-slip', '#/customers': 'menu-customers', '#/company': 'menu-company' };
 
     document.querySelectorAll('.view-pane').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
 
-    const viewKey = Object.keys(views).find(k => hash.startsWith(k)) || '#/slip';
+    const viewKey = Object.keys(views).find(k => hash.startsWith(k)) || '#/login';
     document.getElementById(views[viewKey])?.classList.add('active');
     document.getElementById(menus[viewKey])?.classList.add('active');
 
     if (viewKey === '#/customers') App.renderCustomersTable();
     if (viewKey === '#/company') App.renderCompanyForm();
-    // Sync dock active indicator
-    if (window.Dock) Dock.updateActive();
+    
+    // Sync dock visibility and selection
+    if (window.Dock) Dock.syncUI(hash);
   },
 };
 
@@ -1171,25 +1185,8 @@ const Dock = {
     }
   },
 
-  updateActive() {
-    // Default to login until auth is verified
-    const hash = window.location.hash || '#/login';
-    const map = {
-      '#/login':     'view-login',
-      '#/slip':      'view-slip',
-      '#/customers': 'view-customers',
-      '#/company':   'view-company',
-    };
-    
-    // Set view pane active
-    document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
-    const activeViewId = Object.keys(map).find(k => hash.startsWith(k));
-    if (activeViewId) {
-      const el = document.getElementById(map[activeViewId]);
-      if (el) el.classList.add('active');
-    }
-
-    // Set dock active
+  syncUI(hash) {
+    // Set dock active class
     this.items.forEach(item => item.classList.remove('active'));
     const dockMap = {
       '#/slip':      'dock-slip',
@@ -1202,7 +1199,7 @@ const Dock = {
       if (el) el.classList.add('active');
     }
 
-    // Hide/show dock
+    // Hide/show dock based on login
     const dockWrapper = document.getElementById('dock-wrapper');
     if (dockWrapper) {
       if (hash.startsWith('#/login')) {
@@ -1213,11 +1210,6 @@ const Dock = {
         document.body.style.paddingBottom = '';
       }
     }
-  },
-
-  navigate(hash) {
-    window.location.hash = hash;
-    this.updateActive();
   }
 };
 
@@ -1249,15 +1241,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (_db) {
       const { data: { session } } = await _db.auth.getSession();
       State.session = session;
-      if (!session) {
-        Router.navigate('#/login');
-        return; // Don't load data if not logged in
-      } else {
-        if (window.location.hash.startsWith('#/login') || !window.location.hash) {
-          Router.navigate('#/slip');
-        }
-      }
     }
+
+    Router.authLoaded = true;
+    Router.route(); // Trigger router to enforce auth navigation
+
+    if (_db && !State.session) return; // Don't load data if not logged in
     
     // Logged in or local mode -> load data
     Store.load().then(() => {
