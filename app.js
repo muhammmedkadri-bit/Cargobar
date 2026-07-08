@@ -3,6 +3,13 @@
 // ═══════════════════════════════════════════════
 
 /* ────────────────────────────────────────
+   SUPABASE CLIENT
+──────────────────────────────────────── */
+const supabaseUrl = 'https://wtpijizimadhxcwidrqo.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0cGlqaXppbWFkaHhjd2lkcnFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1Mjk0MTQsImV4cCI6MjA5OTEwNTQxNH0.SyYjzqdmwyhdGKcaB5KTo_xAjbsrpPeKBXZ5WeKcCGc';
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+/* ────────────────────────────────────────
    STATE
 ──────────────────────────────────────── */
 const State = {
@@ -32,28 +39,49 @@ const State = {
    STORAGE HELPERS
 ──────────────────────────────────────── */
 const Store = {
-  load() {
-    const raw = localStorage.getItem('cb_customers');
-    State.customers = raw ? JSON.parse(raw) : [...window.MOCK_CUSTOMERS];
-    if (!raw) this.saveCustomers();
-
+  async load() {
+    // Local counters
     State.tkg_counter = parseInt(localStorage.getItem('cb_tkg_counter') || '1', 10);
     State.print_count = parseInt(localStorage.getItem('cb_print_count') || '0', 10);
 
-    const rawCompany = localStorage.getItem('cb_company');
-    if (rawCompany) State.company = { ...State.company, ...JSON.parse(rawCompany) };
+    // Fetch from Supabase
+    try {
+      const { data: custData, error: custErr } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
+      if (!custErr && custData) {
+        State.customers = custData;
+      } else {
+        State.customers = [...window.MOCK_CUSTOMERS];
+      }
+
+      const { data: compData, error: compErr } = await supabase.from('company').select('*').eq('id', 1).single();
+      if (!compErr && compData) {
+        State.company = { ...State.company, ...compData };
+      }
+    } catch (err) {
+      console.error("Supabase load error:", err);
+    }
   },
-  saveCustomers() {
-    localStorage.setItem('cb_customers', JSON.stringify(State.customers));
+  
+  async saveCustomer(customer) {
+    const { error } = await supabase.from('customers').upsert(customer);
+    if (error) console.error("Error saving customer:", error);
   },
+
+  async deleteCustomer(id) {
+    const { error } = await supabase.from('customers').delete().eq('id', id);
+    if (error) console.error("Error deleting customer:", error);
+  },
+
   saveTKG() {
     localStorage.setItem('cb_tkg_counter', String(State.tkg_counter));
   },
   savePrintCount() {
     localStorage.setItem('cb_print_count', String(State.print_count));
   },
-  saveCompany() {
-    localStorage.setItem('cb_company', JSON.stringify(State.company));
+  
+  async saveCompany() {
+    const { error } = await supabase.from('company').upsert({ id: 1, ...State.company });
+    if (error) console.error("Error saving company:", error);
   },
 };
 
@@ -900,7 +928,7 @@ const App = {
     this.openModal('modal-customer-form');
   },
 
-  handleCustomerSubmit(e) {
+  async handleCustomerSubmit(e) {
     e.preventDefault();
     const id = document.getElementById('cust-form-id').value;
     const data = {
@@ -914,15 +942,18 @@ const App = {
     };
 
     if (id) {
+      data.id = id;
       const idx = State.customers.findIndex(c => c.id === id);
       if (idx !== -1) State.customers[idx] = { ...State.customers[idx], ...data };
     } else {
       data.id  = 'cust-' + Date.now();
       data.kod = data.kod || ('M-' + (State.customers.length + 10001));
-      State.customers.push(data);
+      State.customers.unshift(data); // Add to top locally
     }
 
-    Store.saveCustomers();
+    // Use specific Store method instead of saveCustomers
+    await Store.saveCustomer(data);
+    
     this.closeModal('modal-customer-form');
     this.renderCustomersTable();
   },
@@ -934,9 +965,9 @@ const App = {
     this.showConfirm(
       'Müşteriyi Sil',
       `<b style="color:var(--text-main);">${c.unvan}</b> müşterisini kalıcı olarak silmek istediğinizden emin misiniz?`,
-      () => {
+      async () => {
         State.customers = State.customers.filter(x => x.id !== id);
-        Store.saveCustomers();
+        await Store.deleteCustomer(id);
         this.renderCustomersTable();
       }
     );
@@ -992,7 +1023,7 @@ const App = {
     if (inp) inp.value = '';
   },
 
-  saveCompanySettings() {
+  async saveCompanySettings() {
     const getVal = (id) => (document.getElementById(id)?.value?.trim() || '');
     State.company.unvan   = getVal('cp-unvan');
     State.company.slogan  = getVal('cp-slogan');
@@ -1001,7 +1032,7 @@ const App = {
     State.company.ilce    = getVal('cp-ilce');
     State.company.il      = getVal('cp-il');
     // logo already updated via handleLogoUpload
-    Store.saveCompany();
+    await Store.saveCompany();
 
     // Visual feedback
     const btn = document.getElementById('cp-save-btn');
@@ -1095,8 +1126,8 @@ const Dock = {
 /* ────────────────────────────────────────
    BOOTSTRAP
 ──────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', () => {
-  Store.load();
+document.addEventListener('DOMContentLoaded', async () => {
+  await Store.load();
   App.initCities();
   Router.init();
   TKG.setInputValue();
