@@ -17,6 +17,77 @@
   <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
   <main class="main-content">
 
+    <!-- ─────────── VIEW: LOGIN ─────────── -->
+    <section id="view-login" class="view-pane login-layout">
+      <!-- Left Column -->
+      <div class="login-left">
+        <img src="logo.png" alt="Entrio Logo" class="login-logo">
+        <div class="login-left-content">
+          <h1 class="login-slogan">Kargo ve etiketlemede <span class="neon-highlight">hızlı</span> deneyim</h1>
+          <p class="login-subtext">Kargo etiketleme - Ürün etiketleme - Raf etiketleme - Müşteri Kargo Kodu Takip ve daha fazlası tek platformda</p>
+        </div>
+        
+        <!-- Animated Blobs -->
+        <div class="login-chars">
+          <div class="blob blob-purple">
+            <div class="blob-eyes"><div class="blob-eye"></div><div class="blob-eye"></div></div>
+          </div>
+          <div class="blob blob-black">
+            <div class="blob-eyes"><div class="blob-eye"></div><div class="blob-eye"></div></div>
+          </div>
+          <div class="blob blob-orange">
+            <div class="blob-eyes"><div class="blob-eye"></div><div class="blob-eye"></div></div>
+          </div>
+          <div class="blob blob-yellow">
+            <div class="blob-eyes"><div class="blob-eye"></div><div class="blob-eye"></div></div>
+          </div>
+        </div>
+
+        <div class="login-footer">
+          <a href="#">Gizlilik Politikası</a>
+          <a href="#">Kullanım Koşulları</a>
+          <span>© 2026 Entrio Kargo</span>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="login-right">
+        <div class="login-form-container">
+          <div class="login-header">
+            <h2>Hoş Geldiniz!</h2>
+            <p>Devam etmek için bilgilerinizi giriniz.</p>
+          </div>
+          <form id="login-form" onsubmit="App.handleLogin(event)">
+            <div class="login-input-group">
+              <label for="login-email">E-posta</label>
+              <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <input type="email" id="login-email" class="form-control" placeholder="ornek@sirket.com" required>
+            </div>
+            
+            <div class="login-input-group">
+              <label for="login-password">Şifre</label>
+              <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+            </div>
+
+            <a href="#" class="login-forgot">Şifremi unuttum →</a>
+
+            <button type="submit" class="btn btn-primary login-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+              Giriş Yap
+            </button>
+            <div id="login-error" style="color:var(--red); font-size:0.85rem; text-align:center; margin-top:1rem; display:none;"></div>
+          </form>
+        </div>
+      </div>
+    </section>
+
     <!-- ─────────── VIEW: KARGO FİŞİ OLUŞTUR ─────────── -->
     <section id="view-slip" class="view-pane active">
       <div class="page-header" style="display:flex; align-items:center; justify-content:space-between;">

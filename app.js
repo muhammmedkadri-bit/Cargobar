@@ -18,6 +18,7 @@ try {
    STATE
 ──────────────────────────────────────── */
 const State = {
+  session: null,
   customers: [],
   tkg_counter: 1,
   print_count: 0,
@@ -1030,6 +1031,41 @@ const App = {
     }
   },
 
+  /* ── Auth ── */
+  async handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const errorEl = document.getElementById('login-error');
+    const btn = document.querySelector('.login-btn');
+    
+    errorEl.style.display = 'none';
+    const oldText = btn.innerHTML;
+    btn.innerHTML = 'Giriş Yapılıyor...';
+    btn.disabled = true;
+
+    try {
+      if (!_db) throw new Error('Sunucu bağlantısı yok (localStorage modunda auth kullanılamaz).');
+      const { data, error } = await _db.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        throw error;
+      }
+      
+      State.session = data.session;
+      // Navigate to app
+      Router.navigate('#/slip');
+      
+    } catch (err) {
+      console.error(err);
+      errorEl.textContent = err.message || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.';
+      errorEl.style.display = 'block';
+    } finally {
+      btn.innerHTML = oldText;
+      btn.disabled = false;
+    }
+  },
+
   handleLogoUpload(input) {
     const file = input.files[0];
     if (file) {
@@ -1138,15 +1174,43 @@ const Dock = {
   updateActive() {
     const hash = window.location.hash || '#/slip';
     const map = {
+      '#/login':     'view-login',
+      '#/slip':      'view-slip',
+      '#/customers': 'view-customers',
+      '#/company':   'view-company',
+    };
+    
+    // Set view pane active
+    document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
+    const activeViewId = Object.keys(map).find(k => hash.startsWith(k));
+    if (activeViewId) {
+      const el = document.getElementById(map[activeViewId]);
+      if (el) el.classList.add('active');
+    }
+
+    // Set dock active
+    this.items.forEach(item => item.classList.remove('active'));
+    const dockMap = {
       '#/slip':      'dock-slip',
       '#/customers': 'dock-customers',
       '#/company':   'dock-company',
     };
-    this.items.forEach(item => item.classList.remove('active'));
-    const activeId = Object.keys(map).find(k => hash.startsWith(k));
-    if (activeId) {
-      const el = document.getElementById(map[activeId]);
+    const activeDockId = Object.keys(dockMap).find(k => hash.startsWith(k));
+    if (activeDockId) {
+      const el = document.getElementById(dockMap[activeDockId]);
       if (el) el.classList.add('active');
+    }
+
+    // Hide/show dock
+    const dockWrapper = document.getElementById('dock-wrapper');
+    if (dockWrapper) {
+      if (hash.startsWith('#/login')) {
+        dockWrapper.style.display = 'none';
+        document.body.style.paddingBottom = '0'; // Remove dock padding
+      } else {
+        dockWrapper.style.display = '';
+        document.body.style.paddingBottom = '';
+      }
     }
   },
 
@@ -1179,16 +1243,34 @@ document.addEventListener('DOMContentLoaded', () => {
   window.Slip = Slip;
   window.Dock = Dock;
 
-  // ── 2. Verileri ARKA PLANDA yükle (UI'yı bloke etme) ──
-  Store.load().then(() => {
-    // Data geldi, ilgili görünümü güncelle
-    TKG.setInputValue();
-    Slip.syncSummary();
-
-    const hash = window.location.hash;
-    if (hash.includes('/customers')) App.renderCustomersTable();
-    if (hash.includes('/company'))   App.renderCompanyForm();
-  }).catch(err => {
-    console.error('Veri yüklenemedi:', err);
-  });
+  // ── 2. Auth Control & Verileri ARKA PLANDA yükle (UI'yı bloke etme) ──
+  const checkAuthAndLoad = async () => {
+    if (_db) {
+      const { data: { session } } = await _db.auth.getSession();
+      State.session = session;
+      if (!session) {
+        Router.navigate('#/login');
+        return; // Don't load data if not logged in
+      } else {
+        if (window.location.hash.startsWith('#/login') || !window.location.hash) {
+          Router.navigate('#/slip');
+        }
+      }
+    }
+    
+    // Logged in or local mode -> load data
+    Store.load().then(() => {
+      // Data geldi, ilgili görünümü güncelle
+      TKG.setInputValue();
+      Slip.syncSummary();
+  
+      const hash = window.location.hash;
+      if (hash.includes('/customers')) App.renderCustomersTable();
+      if (hash.includes('/company'))   App.renderCompanyForm();
+    }).catch(err => {
+      console.error('Veri yüklenemedi:', err);
+    });
+  };
+  
+  checkAuthAndLoad();
 });
