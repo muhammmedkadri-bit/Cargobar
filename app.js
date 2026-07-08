@@ -7,7 +7,12 @@
 ──────────────────────────────────────── */
 const supabaseUrl = 'https://wtpijizimadhxcwidrqo.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0cGlqaXppbWFkaHhjd2lkcnFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1Mjk0MTQsImV4cCI6MjA5OTEwNTQxNH0.SyYjzqdmwyhdGKcaB5KTo_xAjbsrpPeKBXZ5WeKcCGc';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+let supabase = null;
+try {
+  supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+} catch(e) {
+  console.error('Supabase SDK yüklenemedi, localStorage modunda çalışılıyor.', e);
+}
 
 /* ────────────────────────────────────────
    STATE
@@ -44,6 +49,15 @@ const Store = {
     State.tkg_counter = parseInt(localStorage.getItem('cb_tkg_counter') || '1', 10);
     State.print_count = parseInt(localStorage.getItem('cb_print_count') || '0', 10);
 
+    if (!supabase) {
+      // Fallback to localStorage
+      const raw = localStorage.getItem('cb_customers');
+      State.customers = raw ? JSON.parse(raw) : [...window.MOCK_CUSTOMERS];
+      const rawCompany = localStorage.getItem('cb_company');
+      if (rawCompany) State.company = { ...State.company, ...JSON.parse(rawCompany) };
+      return;
+    }
+
     // Fetch from Supabase
     try {
       const { data: custData, error: custErr } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
@@ -59,15 +73,30 @@ const Store = {
       }
     } catch (err) {
       console.error("Supabase load error:", err);
+      const raw = localStorage.getItem('cb_customers');
+      State.customers = raw ? JSON.parse(raw) : [...window.MOCK_CUSTOMERS];
     }
   },
   
   async saveCustomer(customer) {
+    if (!supabase) {
+      // Fallback
+      const idx = State.customers.findIndex(c => c.id === customer.id);
+      if (idx === -1) State.customers.push(customer);
+      else State.customers[idx] = customer;
+      localStorage.setItem('cb_customers', JSON.stringify(State.customers));
+      return;
+    }
     const { error } = await supabase.from('customers').upsert(customer);
     if (error) console.error("Error saving customer:", error);
   },
 
   async deleteCustomer(id) {
+    if (!supabase) {
+      State.customers = State.customers.filter(c => c.id !== id);
+      localStorage.setItem('cb_customers', JSON.stringify(State.customers));
+      return;
+    }
     const { error } = await supabase.from('customers').delete().eq('id', id);
     if (error) console.error("Error deleting customer:", error);
   },
@@ -80,6 +109,10 @@ const Store = {
   },
   
   async saveCompany() {
+    if (!supabase) {
+      localStorage.setItem('cb_company', JSON.stringify(State.company));
+      return;
+    }
     const { error } = await supabase.from('company').upsert({ id: 1, ...State.company });
     if (error) console.error("Error saving company:", error);
   },
