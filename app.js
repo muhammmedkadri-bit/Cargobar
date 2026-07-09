@@ -1252,6 +1252,13 @@ document.addEventListener('DOMContentLoaded', () => {
   window.Dock = Dock;
 
   // ── 2. Auth Control & Verileri ARKA PLANDA yükle (UI'yı bloke etme) ──
+
+  // Auth Veil — perdeyi kaldır (auth kontrol bittikten sonra)
+  const hideAuthVeil = () => {
+    const veil = document.getElementById('auth-veil');
+    if (veil) veil.classList.add('av-hidden');
+  };
+
   const checkAuthAndLoad = async () => {
     if (_db) {
       const { data: { session } } = await _db.auth.getSession();
@@ -1259,13 +1266,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     Router.authLoaded = true;
-    Router.route(); // Trigger router to enforce auth navigation
+    Router.route(); // Auth guard yönlendirmeyi uygular
+    hideAuthVeil(); // Perde kaldırılır — artık doğru view görünür
 
-    if (_db && !State.session) return; // Don't load data if not logged in
+    if (_db && !State.session) return; // Giriş yapılmamışsa veri yükleme
     
-    // Logged in or local mode -> load data
+    // Giriş yapılmış veya local mod → veri yükle
     Store.load().then(() => {
-      // Data geldi, ilgili görünümü güncelle
       TKG.setInputValue();
       Slip.syncSummary();
   

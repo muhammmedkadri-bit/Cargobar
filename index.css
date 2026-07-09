@@ -1499,3 +1499,56 @@ input[type="number"] { -moz-appearance: textfield; }
 /* Spin animation for loading */
 @keyframes spin { to { transform: rotate(360deg); } }
 .lp-spin { animation: spin 0.8s linear infinite; }
+
+/* ═══════════════════════════════════════
+   AUTH VEIL — Kimlik doğrulama perdesi
+   Tüm içeriği gizler, auth yüklenince kaybolur
+═══════════════════════════════════════ */
+#auth-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(rgba(126, 217, 87, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(126, 217, 87, 0.15) 1px, transparent 1px);
+  background-size: 48px 48px;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+#auth-veil.av-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.av-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.av-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  animation: av-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes av-pulse {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(0.93); }
+}
+
+.av-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(126, 217, 87, 0.2);
+  border-top-color: #7ed957;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
