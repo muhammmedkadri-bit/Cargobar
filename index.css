@@ -1993,12 +1993,11 @@ input[type="number"] { -moz-appearance: textfield; }
 
   /* ─── GENEL YERLEŞİM ─── */
   .app-container {
-    padding: 1rem;
-    padding-bottom: 80px; /* Dock'ın arkasında kalmasın diye */
+    padding-bottom: 100px !important; /* Tab bar boşluğu */
   }
   .main-content {
     margin-left: 0;
-    padding: 0;
+    padding: 1rem 1.25rem !important; /* Add left and right padding to prevent squished look */
   }
   
   /* ─── GİRİŞ (LOGIN) ─── */
