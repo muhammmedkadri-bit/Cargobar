@@ -2053,26 +2053,31 @@ input[type="number"] { -moz-appearance: textfield; }
   
   /* ─── YAZDIRMA SEÇENEKLERİ (MOBİL SIKIŞTIRMA) ─── */
   .print-options-card .card-body {
-    padding: 1rem !important; /* Reduce from 1.5rem */
+    padding: 0.75rem !important; /* Further reduce from 1rem */
   }
   .print-options-card .form-section-title {
-    margin-bottom: 0.5rem !important;
+    margin-bottom: 0.25rem !important;
+    font-size: 0.85rem !important;
   }
   .print-options-card .text-muted.mt-1 {
-    margin-bottom: 1rem !important; /* Reduce from 1.25rem */
+    margin-bottom: 0.75rem !important; /* Reduce from 1rem */
+    font-size: 0.75rem !important;
   }
   .copy-count-row {
-    margin-bottom: 1rem !important; /* Reduce from 1.25rem */
+    margin-bottom: 0.75rem !important; /* Reduce from 1rem */
   }
   .print-divider {
-    margin: 1rem 0 !important; /* Reduce from 1.25rem */
+    margin: 0.75rem 0 !important; /* Reduce from 1rem */
   }
   .print-summary {
-    margin-bottom: 1rem !important; /* Reduce from 1.25rem */
-    padding: 0.75rem !important; /* Reduce padding */
+    margin-bottom: 0.75rem !important; /* Reduce from 1rem */
+    padding: 0.5rem !important; /* Reduce padding */
+    font-size: 0.75rem !important;
   }
   .btn-print-huge {
-    margin-top: 0.5rem !important; /* Reduce margin */
+    margin-top: 0.25rem !important; /* Reduce margin */
+    padding: 1rem !important; /* Slightly smaller padding */
+    font-size: 1.15rem !important;
   }
   
   /* Preview area styling for mobile */
@@ -2114,6 +2119,18 @@ input[type="number"] { -moz-appearance: textfield; }
     width: 100%;
     justify-content: center;
   }
+  
+  /* Fix logo centering on view-slip */
+  #view-slip .page-header {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  #view-slip .page-header img {
+    height: 60px !important;
+    margin-left: 1rem !important;
+  }
+
   .search-bar {
     flex-direction: column;
   }
