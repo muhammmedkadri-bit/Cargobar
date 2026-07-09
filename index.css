@@ -1031,15 +1031,17 @@ input[type="number"] { -moz-appearance: textfield; }
   flex-direction: column;
   flex: 1;
   justify-content: center;
+  align-items: center;
+  text-align: center;
   gap: 2rem;
 }
 
 /* Logo */
 .login-logo {
-  height: 60px;
+  height: 120px;
   width: auto;
   object-fit: contain;
-  align-self: flex-start;
+  align-self: center;
 }
 
 /* Tagline */
@@ -1084,6 +1086,7 @@ input[type="number"] { -moz-appearance: textfield; }
 .login-features {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0.6rem;
   margin-top: 0.5rem;
 }
