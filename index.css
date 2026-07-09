@@ -1980,7 +1980,7 @@ input[type="number"] { -moz-appearance: textfield; }
     overflow-y: visible !important; /* Let the body scroll instead of this div */
   }
   /* ─── GİRİŞ (LOGIN) MOBİL TASARIMI ─── */
-  .login-layout {
+  .login-layout.active {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
