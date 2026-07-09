@@ -2006,10 +2006,45 @@ input[type="number"] { -moz-appearance: textfield; }
     height: auto !important; /* Allow content to dictate height */
     overflow-y: visible !important; /* Let the body scroll instead of this div */
   }
-  /* ─── GİRİŞ (LOGIN) ─── */
-  .login-box {
-    width: 95%;
-    padding: 1.5rem;
+  /* ─── GİRİŞ (LOGIN) MOBİL TASARIMI ─── */
+  .login-right {
+    padding: 2rem 1.25rem !important; /* Less padding to give more room */
+    justify-content: center !important;
+  }
+  .login-mobile-logo {
+    margin-bottom: 2.5rem !important;
+  }
+  .login-mobile-logo img {
+    height: 64px !important; /* Bigger logo on mobile */
+  }
+  .login-card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 1.5rem 0 !important; /* Remove horizontal padding so inputs span full width */
+    background: transparent !important; /* Blend with background */
+  }
+  .login-header h1 {
+    font-size: 1.75rem !important; /* Bigger welcome text */
+  }
+  .lf-input {
+    height: 54px !important; /* Huge tap-friendly inputs */
+    font-size: 1rem !important;
+    border-radius: 12px !important;
+  }
+  .lf-submit-btn {
+    height: 54px !important; /* Huge submit button */
+    font-size: 1.05rem !important;
+    border-radius: 12px !important;
+    margin-top: 1rem !important;
+  }
+  .login-header-icon {
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 16px !important;
+  }
+  .login-header-icon svg {
+    width: 28px !important;
+    height: 28px !important;
   }
 
   /* ─── KARGO FİŞİ OLUŞTURMA (PREMIUM MOBILE LAYOUT) ─── */
