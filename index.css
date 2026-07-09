@@ -123,10 +123,17 @@ body {
   color: var(--foreground);
 }
 .page-subtitle {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: var(--muted-foreground);
   margin-top: 0.25rem;
-  font-weight: 400;
+}
+
+/* ── Company Layout ── */
+.company-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 1.5rem;
+  align-items: start;
 }
 
 /* ═══════════════════════════════════════
@@ -2096,71 +2103,108 @@ input[type="number"] { -moz-appearance: textfield; }
     box-shadow: 0 8px 20px rgba(126, 217, 87, 0.3) !important;
   }
 
+  /* ─── PAGE HEADER & SEARCH BAR (MOBİL) ─── */
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .page-header .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .search-bar {
+    flex-direction: column;
+  }
+
   /* ─── MÜŞTERİ TABLOSUNU ŞIK KARTLARA ÇEVİRME ─── */
-  .table-responsive {
+  .table-wrap {
+    background: transparent !important;
     border: none !important;
     box-shadow: none !important;
   }
-  .table-responsive table,
-  .table-responsive thead,
-  .table-responsive tbody,
-  .table-responsive th,
-  .table-responsive td,
-  .table-responsive tr {
+  .table-wrap table,
+  .table-wrap thead,
+  .table-wrap tbody,
+  .table-wrap th,
+  .table-wrap td,
+  .table-wrap tr {
     display: block;
   }
-  .table-responsive thead {
+  .table-wrap thead {
     display: none; /* Tablo başlığını gizle */
   }
-  .table-responsive tbody tr {
+  .table-wrap tbody tr {
     background: white;
     border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     margin-bottom: 1rem;
-    padding: 1rem;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    padding: 1.25rem 1rem;
+    box-shadow: var(--shadow-sm);
   }
-  .table-responsive td {
+  .table-wrap td {
     border: none !important;
     padding: 0.5rem 0 !important;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.9rem;
-    border-bottom: 1px dashed #f1f5f9 !important;
+    font-size: 0.95rem;
+    border-bottom: 1px dashed var(--border) !important;
   }
-  .table-responsive td:last-child {
+  .table-wrap td:last-child {
     border-bottom: none !important;
-    margin-top: 0.5rem;
-    padding-top: 0.75rem !important;
-    justify-content: flex-end;
+    margin-top: 0.75rem;
+    padding-top: 1rem !important;
+    justify-content: space-between; /* Space out buttons */
     gap: 0.5rem;
   }
+  .table-wrap td:last-child .btn {
+    flex: 1; /* Make buttons equal width */
+    justify-content: center;
+  }
+  
   /* Kolon başlıklarını td'lerin soluna ekleyelim */
-  .table-responsive td::before {
+  .table-wrap td::before {
     content: attr(data-label);
     font-weight: 600;
     color: var(--text-muted);
     font-size: 0.85rem;
   }
-  .table-responsive td:last-child::before {
+  .table-wrap td:last-child::before {
     display: none; /* Butonların olduğu kolonda başlığı gizle */
   }
 
   /* ─── ŞİRKETİM & AYARLAR ─── */
+  .company-layout {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
   .settings-tabs {
     flex-wrap: wrap;
   }
   .settings-tab {
     padding: 0.75rem 0.5rem;
     font-size: 0.85rem;
+    flex: 1; /* Make tabs span evenly */
   }
   .template-grid {
-    grid-template-columns: 1fr 1fr !important;
+    grid-template-columns: 1fr !important; /* Templates full width on small screens */
     gap: 1rem !important;
   }
   .company-form-grid {
     grid-template-columns: 1fr !important;
     gap: 1rem !important;
+  }
+  /* Settings Kargo Kodu input flex */
+  #settings-tab-code > div[style*="display: flex; gap: 0.75rem;"] {
+    max-width: 100% !important;
+    flex-direction: column !important;
+  }
+  #settings-tab-code > div[style*="display: flex; gap: 0.75rem;"] .btn {
+    width: 100%;
+  }
+  #prefix-list {
+    max-width: 100% !important;
   }
 }
