@@ -1972,34 +1972,33 @@ input[type="number"] { -moz-appearance: textfield; }
   }
   
   .dock-label {
-    display: block !important;
-    font-size: 0.65rem !important;
-    font-weight: 600;
-    color: #1a1d26;
-    opacity: 0.6;
-    text-align: center;
+    display: none !important;
   }
   .dock-item.active .dock-label {
-    color: var(--amber);
-    opacity: 1;
+    display: none !important;
   }
   .dock-divider {
     display: none;
   }
 
-  .app-container {
-    padding-bottom: 100px !important; /* Tab bar boşluğu */
+  /* ─── GENEL YERLEŞİM & NATIVE SCROLL (iOS Scroll to Top Support) ─── */
+  #app-container {
+    height: auto !important;
+    min-height: 100vh;
+    display: block !important; /* Stop flex so body can scroll naturally */
   }
-
-  /* ─── GENEL YERLEŞİM ─── */
+  
   .app-container {
-    padding-bottom: 100px !important; /* Tab bar boşluğu */
+    padding-bottom: 0 !important; /* Managed by main-content instead */
   }
+  
   .main-content {
     margin-left: 0;
     padding: 1rem 1.25rem !important; /* Add left and right padding to prevent squished look */
+    padding-bottom: 130px !important; /* High bottom padding to keep print button safely above the dock */
+    height: auto !important; /* Allow content to dictate height */
+    overflow-y: visible !important; /* Let the body scroll instead of this div */
   }
-  
   /* ─── GİRİŞ (LOGIN) ─── */
   .login-box {
     width: 95%;
