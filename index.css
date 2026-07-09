@@ -1003,11 +1003,14 @@ input[type="number"] { -moz-appearance: textfield; }
 
 /* Full-screen layout split */
 .view-pane.login-layout.active {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 100dvh;
   width: 100%;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 /* ── Left decorative panel ── */
@@ -1021,17 +1024,9 @@ input[type="number"] { -moz-appearance: textfield; }
   background: #0f1a0a;
 }
 
-/* Subtle grid overlay */
+/* Subtle grid overlay removed */
 .login-left::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(126,217,87,0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(126,217,87,0.07) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
 
 /* Radial glow spot */
@@ -1157,14 +1152,7 @@ input[type="number"] { -moz-appearance: textfield; }
 }
 
 .login-right::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(rgba(126, 217, 87, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(126, 217, 87, 0.04) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
+  display: none;
 }
 
 /* Mobile-only logo */
