@@ -1995,7 +1995,7 @@ input[type="number"] { -moz-appearance: textfield; }
   .main-content {
     margin-left: 0;
     padding: 1rem 1.25rem !important; /* Add left and right padding to prevent squished look */
-    padding-bottom: 130px !important; /* High bottom padding to keep print button safely above the dock */
+    padding-bottom: 90px !important; /* Reduced bottom padding to keep print button safely above the dock */
     height: auto !important; /* Allow content to dictate height */
     overflow-y: visible !important; /* Let the body scroll instead of this div */
   }
@@ -2042,6 +2042,30 @@ input[type="number"] { -moz-appearance: textfield; }
   
   .desi-input-wrapper {
     margin-bottom: 0 !important;
+  }
+  
+  /* ─── YAZDIRMA SEÇENEKLERİ (MOBİL SIKIŞTIRMA) ─── */
+  .print-options-card .card-body {
+    padding: 1rem !important; /* Reduce from 1.5rem */
+  }
+  .print-options-card .form-section-title {
+    margin-bottom: 0.5rem !important;
+  }
+  .print-options-card .text-muted.mt-1 {
+    margin-bottom: 1rem !important; /* Reduce from 1.25rem */
+  }
+  .copy-count-row {
+    margin-bottom: 1rem !important; /* Reduce from 1.25rem */
+  }
+  .print-divider {
+    margin: 1rem 0 !important; /* Reduce from 1.25rem */
+  }
+  .print-summary {
+    margin-bottom: 1rem !important; /* Reduce from 1.25rem */
+    padding: 0.75rem !important; /* Reduce padding */
+  }
+  .btn-print-huge {
+    margin-top: 0.5rem !important; /* Reduce margin */
   }
   
   /* Preview area styling for mobile */
