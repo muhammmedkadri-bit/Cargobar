@@ -656,10 +656,14 @@ const App = {
   },
   async logout() {
     if (window._db) {
-      await _db.auth.signOut();
+      // scope:'global' → sunucu + tarayıcı localStorage token'larını tamamen siler
+      await _db.auth.signOut({ scope: 'global' });
     }
     State.session = null;
-    Router.navigate('#/login');
+    Router.authLoaded = false;
+    // Hard reload: hash navigate yerine tam sayfa yenile → önbellekteki session silinir
+    window.location.replace('/#/login');
+    setTimeout(() => window.location.reload(), 50);
   },
 
   initCities() {
@@ -1286,6 +1290,21 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Expose Router to window so LoginPage can use it
   window.Router = Router;
+
+  // ── 3. Supabase Auth State Listener ──
+  // Supabase'in kendi event'ini dinle — oturum dışarıdan kapanırsa da yakala
+  if (_db) {
+    _db.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        State.session = null;
+        Router.authLoaded = false;
+        window.location.replace('/#/login');
+        setTimeout(() => window.location.reload(), 50);
+      } else if (event === 'SIGNED_IN' && session) {
+        State.session = session;
+      }
+    });
+  }
 
   checkAuthAndLoad();
   LoginPage.init();
