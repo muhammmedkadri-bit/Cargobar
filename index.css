@@ -1938,28 +1938,71 @@ input[type="number"] { -moz-appearance: textfield; }
     padding: 1.5rem;
   }
 
-  /* ─── KARGO FİŞİ OLUŞTURMA ─── */
+  /* ─── KARGO FİŞİ OLUŞTURMA (PREMIUM MOBILE LAYOUT) ─── */
   .slip-layout {
-    grid-template-columns: 1fr !important; /* Stack form and preview vertically */
-  }
-  .mode-toggle-group {
-    grid-template-columns: 1fr !important; /* Stack customer modes vertically */
-  }
-  .desi-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.5rem !important;
   }
   
-  /* Preview wrap */
+  #view-slip .card-body {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+  }
+  
+  .mode-toggle-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+
+  .form-grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+  
+  .desi-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 1rem !important;
+  }
+  
+  /* Make the 4th item (Gerçek Ağırlık) span 2 columns to look balanced */
+  .desi-input-wrapper:nth-child(4) {
+    grid-column: span 2;
+  }
+  
+  .desi-input-wrapper {
+    margin-bottom: 0 !important;
+  }
+  
+  /* Preview area styling for mobile */
   .label-preview-wrap {
     overflow-x: auto;
     display: flex;
     justify-content: center;
-    padding: 1rem 0;
+    padding: 1.5rem 0;
+    margin: 0 -1.5rem; /* Bleed out of card padding for full width feel */
+    background: #f8fafc; /* Subtle background to separate it */
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
   }
+  
   .label-page {
-    /* Scale down slightly to fit on small mobile screens */
-    transform: scale(0.9);
+    /* Scale down perfectly to fit mobile screens (~350px width max) */
+    transform: scale(0.85);
     transform-origin: top center;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Sticky or huge print button enhancement for mobile */
+  .btn-print-huge {
+    padding: 1.25rem !important;
+    font-size: 1.25rem !important;
+    border-radius: 16px !important;
+    margin-top: 1rem;
+    box-shadow: 0 8px 20px rgba(126, 217, 87, 0.3) !important;
   }
 
   /* ─── MÜŞTERİ TABLOSUNU ŞIK KARTLARA ÇEVİRME ─── */
