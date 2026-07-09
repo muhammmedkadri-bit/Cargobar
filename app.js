@@ -218,11 +218,22 @@ const PageTransition = {
   _timer: null,
   _el() { return document.getElementById('page-transition'); },
 
-  show() {
+  show(msg = '') {
     const el = this._el();
     if (!el) return;
     const logo = el.querySelector('.pt-logo');
     if (logo) { logo.style.animation = 'none'; logo.offsetHeight; logo.style.animation = ''; }
+    
+    const textEl = document.getElementById('pt-text');
+    if (textEl) {
+      if (msg) {
+        textEl.textContent = msg;
+        textEl.classList.add('active');
+      } else {
+        textEl.classList.remove('active');
+      }
+    }
+
     el.classList.remove('pt-hiding');
     el.classList.add('pt-active');
     clearTimeout(this._timer);
@@ -1417,22 +1428,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     Router.authLoaded = true;
-    Router.route(); // Auth guard yönlendirmeyi uygular
-    hideAuthVeil(); // Perde kaldırılır — artık doğru view görünür
 
-    if (_db && !State.session) return; // Giriş yapılmamışsa veri yükleme
+    if (_db && !State.session) {
+      Router.route(); // Auth guard yönlendirmeyi uygular
+      hideAuthVeil(); // Perde kaldırılır — artık doğru view görünür
+      return;
+    }
     
     // Giriş yapılmış veya local mod → veri yükle
-    Store.load().then(() => {
+    try {
+      await Store.load();
       TKG.setInputValue();
       Slip.syncSummary();
-  
+    } catch(err) {
+      console.error('Veri yüklenemedi:', err);
+    } finally {
+      Router.route();
+      hideAuthVeil();
+      
       const hash = window.location.hash;
       if (hash.includes('/customers')) App.renderCustomersTable();
       if (hash.includes('/company'))   App.renderCompanyForm();
-    }).catch(err => {
-      console.error('Veri yüklenemedi:', err);
-    });
+    }
   };
   
   // Expose Router to window so LoginPage can use it
@@ -1559,7 +1576,18 @@ const LoginPage = {
       if (error) throw error;
       State.session = data.session;
       Router.authLoaded = true; // mark auth as resolved
-      Router.route();           // auth guard will navigate to #/slip
+      
+      // Hoşgeldiniz & Loader göster
+      PageTransition.show('Hoşgeldiniz, verileriniz yükleniyor...');
+      
+      // Verileri taze çek
+      await Store.load();
+      TKG.setInputValue();
+      Slip.syncSummary();
+      
+      Router.route(); // Yönlendirme yap
+      setTimeout(() => PageTransition.hide(), 800); // Loader'ı kaldır
+      
     } catch (err) {
       errorEl.textContent = err.message === 'Invalid login credentials'
         ? 'E-posta veya şifre hatalı. Lütfen tekrar deneyiniz.'
