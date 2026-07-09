@@ -1021,31 +1021,7 @@ input[type="number"] { -moz-appearance: textfield; }
   justify-content: space-between;
   padding: 3rem;
   overflow: hidden;
-  background: #f8fafc;
-}
-
-/* Subtle grid overlay restored */
-.login-left::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(126,217,87,0.15) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(126,217,87,0.15) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Radial glow spot */
-.login-left::after {
-  content: "";
-  position: absolute;
-  top: -80px; left: -80px;
-  width: 480px; height: 480px;
-  background: radial-gradient(circle, rgba(126,217,87,0.18) 0%, transparent 65%);
-  pointer-events: none;
-  z-index: 0;
+  background: transparent;
 }
 
 .login-left-content {
@@ -1155,12 +1131,8 @@ input[type="number"] { -moz-appearance: textfield; }
   justify-content: center;
   align-items: center;
   padding: 3rem 2.5rem;
-  background: #ffffff;
+  background: transparent;
   position: relative;
-}
-
-.login-right::before {
-  display: none;
 }
 
 /* Mobile-only logo */
