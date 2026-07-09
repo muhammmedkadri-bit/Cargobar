@@ -656,14 +656,13 @@ const App = {
   },
   async logout() {
     if (window._db) {
-      // scope:'global' → sunucu + tarayıcı localStorage token'larını tamamen siler
       await _db.auth.signOut({ scope: 'global' });
+      // signOut localStorage'daki session'ı senkron olarak siler.
+      // Sayfa yenilenince getSession() null döndürecek, router login'e yönlendirecek.
     }
     State.session = null;
     Router.authLoaded = false;
-    // Hard reload: hash navigate yerine tam sayfa yenile → önbellekteki session silinir
-    window.location.replace('/#/login');
-    setTimeout(() => window.location.reload(), 50);
+    window.location.reload();
   },
 
   initCities() {
@@ -1292,15 +1291,14 @@ document.addEventListener('DOMContentLoaded', () => {
   window.Router = Router;
 
   // ── 3. Supabase Auth State Listener ──
-  // Supabase'in kendi event'ini dinle — oturum dışarıdan kapanırsa da yakala
+  // Supabase session'ları dışarıdan değişirse (başka sekme, token sönmesi) yakalamak için.
+  // NOT: Navigation buradan yapilmaz — sadece State güncellenir.
+  //      Navigation’u checkAuthAndLoad ve logout() yönetiyor.
   if (_db) {
     _db.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         State.session = null;
-        Router.authLoaded = false;
-        window.location.replace('/#/login');
-        setTimeout(() => window.location.reload(), 50);
-      } else if (event === 'SIGNED_IN' && session) {
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         State.session = session;
       }
     });
