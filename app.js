@@ -150,9 +150,6 @@ const PageTransition = {
   show() {
     const el = this._el();
     if (!el) return;
-    // pt-bar animasyonunu sıfırla — her seferinde yeniden oynar
-    const bar = el.querySelector('.pt-bar');
-    if (bar) { bar.style.animation = 'none'; bar.offsetHeight; bar.style.animation = ''; }
     const logo = el.querySelector('.pt-logo');
     if (logo) { logo.style.animation = 'none'; logo.offsetHeight; logo.style.animation = ''; }
     el.classList.remove('pt-hiding');
