@@ -1532,33 +1532,6 @@ input[type="number"] { -moz-appearance: textfield; }
   pointer-events: none;
 }
 
-.av-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-.av-logo {
-  width: 72px;
-  height: 72px;
-  object-fit: contain;
-  animation: av-pulse 1.8s ease-in-out infinite;
-}
-
-@keyframes av-pulse {
-  0%, 100% { opacity: 1;   transform: scale(1); }
-  50%       { opacity: 0.6; transform: scale(0.93); }
-}
-
-.av-spinner {
-  width: 28px;
-  height: 28px;
-  border: 3px solid rgba(126, 217, 87, 0.2);
-  border-top-color: #7ed957;
-  border-radius: 50%;
-  animation: spin 0.75s linear infinite;
-}
 
 /* Login sayfasında veil hiç gösterilmez — anında gizle */
 #auth-veil.av-skip {
@@ -2017,7 +1990,8 @@ input[type="number"] { -moz-appearance: textfield; }
     background: #ffffff !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow-y: auto !important;
+    overflow: hidden !important;
+    touch-action: none !important;
     display: block !important;
   }
   .login-right {
