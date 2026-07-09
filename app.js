@@ -15,7 +15,44 @@ try {
 }
 
 /* ────────────────────────────────────────
-   STATE
+   TOAST NOTIFICATIONS
+──────────────────────────────────────── */
+const Toast = {
+  show(msg, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    // Icon based on type
+    let iconHtml = '';
+    if (type === 'success') {
+      iconHtml = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+    } else if (type === 'error') {
+      iconHtml = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>`;
+    } else if (type === 'warning') {
+      iconHtml = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
+    } else {
+      iconHtml = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+    }
+
+    toast.innerHTML = `
+      <div class="toast-icon">${iconHtml}</div>
+      <div class="toast-msg">${msg}</div>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add('toast-hiding');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+};
+
+/* ────────────────────────────────────────
+   STATE & STORE
 ──────────────────────────────────────── */
 const State = {
   session: null,
@@ -46,60 +83,84 @@ const State = {
 ──────────────────────────────────────── */
 const Store = {
   async load() {
-    // Local counters
+    // 1. Local counters
     State.tkg_counter = parseInt(localStorage.getItem('cb_tkg_counter') || '1', 10);
     State.print_count = parseInt(localStorage.getItem('cb_print_count') || '0', 10);
 
-    if (!_db) {
-      // Fallback to localStorage
-      const raw = localStorage.getItem('cb_customers');
-      State.customers = raw ? JSON.parse(raw) : [...window.MOCK_CUSTOMERS];
-      const rawCompany = localStorage.getItem('cb_company');
-      if (rawCompany) State.company = { ...State.company, ...JSON.parse(rawCompany) };
-      return;
+    // 2. Optimistic Load (Offline Mode / Fallback)
+    const rawCust = localStorage.getItem('cb_customers');
+    State.customers = rawCust ? JSON.parse(rawCust) : [...window.MOCK_CUSTOMERS];
+    const rawComp = localStorage.getItem('cb_company');
+    if (rawComp) State.company = { ...State.company, ...JSON.parse(rawComp) };
+
+    if (!_db || !State.session) {
+      return; // Offline mode or not logged in, we use local data.
     }
 
-    // Fetch from Supabase
+    // 3. Fetch from Supabase and update local cache
     try {
       const { data: custData, error: custErr } = await _db.from('customers').select('*').order('created_at', { ascending: false });
       if (!custErr && custData) {
         State.customers = custData;
-      } else {
-        State.customers = [...window.MOCK_CUSTOMERS];
+        localStorage.setItem('cb_customers', JSON.stringify(State.customers));
       }
 
       const { data: compData, error: compErr } = await _db.from('company').select('*').eq('id', 1).single();
       if (!compErr && compData) {
         State.company = { ...State.company, ...compData };
+        localStorage.setItem('cb_company', JSON.stringify(State.company));
+      } else if (compErr && compErr.code !== 'PGRST116') {
+        // Log errors other than "No rows found"
+        console.error("Supabase company load error:", compErr);
       }
     } catch (err) {
-      console.error("Supabase load error:", err);
-      const raw = localStorage.getItem('cb_customers');
-      State.customers = raw ? JSON.parse(raw) : [...window.MOCK_CUSTOMERS];
+      console.error("Supabase load exception:", err);
+      Toast.show('Veriler sunucudan çekilemedi, çevrimdışı moddasınız.', 'warning');
     }
   },
   
   async saveCustomer(customer) {
-    if (!_db) {
-      // Fallback
-      const idx = State.customers.findIndex(c => c.id === customer.id);
-      if (idx === -1) State.customers.push(customer);
-      else State.customers[idx] = customer;
-      localStorage.setItem('cb_customers', JSON.stringify(State.customers));
+    // 1. Update State
+    const idx = State.customers.findIndex(c => c.id === customer.id);
+    if (idx === -1) State.customers.push(customer);
+    else State.customers[idx] = customer;
+    
+    // 2. Save Locally (Offline support)
+    localStorage.setItem('cb_customers', JSON.stringify(State.customers));
+
+    // 3. Save to Supabase
+    if (!_db || !State.session) {
+      Toast.show('Müşteri cihaza kaydedildi (Çevrimdışı)', 'warning');
       return;
     }
-    const { error } = await _db.from('customers').upsert(customer);
-    if (error) console.error("Error saving customer:", error);
+    try {
+      const { error } = await _db.from('customers').upsert(customer);
+      if (error) throw error;
+      Toast.show('Müşteri başarıyla kaydedildi.', 'success');
+    } catch (err) {
+      console.error("Error saving customer:", err);
+      Toast.show('Sunucuya kaydedilemedi, veriler cihazınızda güvende.', 'warning');
+    }
   },
 
   async deleteCustomer(id) {
-    if (!_db) {
-      State.customers = State.customers.filter(c => c.id !== id);
-      localStorage.setItem('cb_customers', JSON.stringify(State.customers));
+    // 1. Update State & Local
+    State.customers = State.customers.filter(c => c.id !== id);
+    localStorage.setItem('cb_customers', JSON.stringify(State.customers));
+
+    // 2. Supabase Delete
+    if (!_db || !State.session) {
+      Toast.show('Müşteri cihazdan silindi (Çevrimdışı)', 'warning');
       return;
     }
-    const { error } = await _db.from('customers').delete().eq('id', id);
-    if (error) console.error("Error deleting customer:", error);
+    try {
+      const { error } = await _db.from('customers').delete().eq('id', id);
+      if (error) throw error;
+      Toast.show('Müşteri başarıyla silindi.', 'success');
+    } catch (err) {
+      console.error("Error deleting customer:", err);
+      Toast.show('Sunucudan silinemedi, ancak cihazınızdan silindi.', 'warning');
+    }
   },
 
   saveTKG() {
@@ -110,12 +171,22 @@ const Store = {
   },
   
   async saveCompany() {
-    if (!_db) {
-      localStorage.setItem('cb_company', JSON.stringify(State.company));
+    // 1. Save Locally
+    localStorage.setItem('cb_company', JSON.stringify(State.company));
+
+    // 2. Save to Supabase
+    if (!_db || !State.session) {
+      Toast.show('Şirket bilgileri cihaza kaydedildi (Çevrimdışı)', 'warning');
       return;
     }
-    const { error } = await _db.from('company').upsert({ id: 1, ...State.company });
-    if (error) console.error("Error saving company:", error);
+    try {
+      const { error } = await _db.from('company').upsert({ id: 1, ...State.company });
+      if (error) throw error;
+      Toast.show('Şirket bilgileri başarıyla güncellendi.', 'success');
+    } catch (err) {
+      console.error("Error saving company:", err);
+      Toast.show('Sunucuya kaydedilemedi, veriler cihazınızda güvende.', 'warning');
+    }
   },
 };
 
