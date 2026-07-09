@@ -1552,3 +1552,73 @@ input[type="number"] { -moz-appearance: textfield; }
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
 }
+
+/* Login sayfasında veil hiç gösterilmez — anında gizle */
+#auth-veil.av-skip {
+  display: none !important;
+}
+
+/* ═══════════════════════════════════════
+   PAGE TRANSITION — Sayfa geçiş yükleyici
+═══════════════════════════════════════ */
+#page-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 88888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(rgba(126, 217, 87, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(126, 217, 87, 0.12) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.18s ease, visibility 0.18s ease;
+}
+#page-transition.pt-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: all;
+}
+#page-transition.pt-hiding {
+  opacity: 0;
+  visibility: hidden;
+}
+.pt-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+.pt-logo {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  animation: pt-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes pt-pop {
+  0%   { opacity: 0; transform: scale(0.65); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.pt-bar-wrap {
+  width: 140px;
+  height: 3px;
+  background: rgba(126, 217, 87, 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.pt-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #7ed957, #5da83f);
+  border-radius: 999px;
+  animation: pt-progress 0.42s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes pt-progress {
+  0%   { width: 0%; }
+  60%  { width: 72%; }
+  100% { width: 100%; }
+}

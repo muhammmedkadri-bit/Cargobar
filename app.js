@@ -140,8 +140,40 @@ const TKG = {
 /* ────────────────────────────────────────
    ROUTING
 ──────────────────────────────────────── */
+/* ────────────────────────────────────────
+   PAGE TRANSITION
+──────────────────────────────────────── */
+const PageTransition = {
+  _timer: null,
+  _el() { return document.getElementById('page-transition'); },
+
+  show() {
+    const el = this._el();
+    if (!el) return;
+    // pt-bar animasyonunu sıfırla — her seferinde yeniden oynar
+    const bar = el.querySelector('.pt-bar');
+    if (bar) { bar.style.animation = 'none'; bar.offsetHeight; bar.style.animation = ''; }
+    const logo = el.querySelector('.pt-logo');
+    if (logo) { logo.style.animation = 'none'; logo.offsetHeight; logo.style.animation = ''; }
+    el.classList.remove('pt-hiding');
+    el.classList.add('pt-active');
+    clearTimeout(this._timer);
+  },
+
+  hide() {
+    const el = this._el();
+    if (!el) return;
+    el.classList.add('pt-hiding');
+    this._timer = setTimeout(() => {
+      el.classList.remove('pt-active', 'pt-hiding');
+    }, 220);
+  },
+};
+
 const Router = {
   authLoaded: false,
+  _prevHash: null,
+
   init() {
     window.addEventListener('beforeprint', () => { State.isPrinting = true; });
     window.addEventListener('afterprint',  () => {
@@ -154,19 +186,31 @@ const Router = {
     });
     this.route();
   },
+
   navigate(hash) {
+    // Sadece giriş yapmış kullanıcı sayfalar arasında geçiş yaparken göster
+    const fromProtected = this._prevHash && this._prevHash !== '#/login';
+    const toProtected   = hash !== '#/login';
+    if (State.session && fromProtected && toProtected && this._prevHash !== hash) {
+      PageTransition.show();
+      // Geçiş süresi dolunca kapat
+      setTimeout(() => PageTransition.hide(), 480);
+    }
     window.location.hash = hash;
   },
+
   route() {
     let hash = window.location.hash || '#/login';
 
     // Auth guard
     if (this.authLoaded) {
       if (!State.session && hash !== '#/login') {
+        this._prevHash = hash;
         this.navigate('#/login');
         return;
       }
       if (State.session && hash === '#/login') {
+        this._prevHash = hash;
         this.navigate('#/slip');
         return;
       }
@@ -190,9 +234,11 @@ const Router = {
     };
     document.title = titles[viewKey] || 'Entrio Kargo';
 
+    this._prevHash = hash;
+
     if (viewKey === '#/customers') App.renderCustomersTable();
     if (viewKey === '#/company') App.renderCompanyForm();
-    
+
     // Sync dock visibility and selection
     if (window.Dock) Dock.syncUI(hash);
   },
@@ -1251,6 +1297,11 @@ const Dock = {
         document.body.style.paddingBottom = '';
       }
     }
+  },
+
+  navigate(hash) {
+    // Router üzerinden yönlendir — sayfa geçiş animasyonu tetiklenir
+    Router.navigate(hash);
   }
 };
 
@@ -1258,6 +1309,12 @@ const Dock = {
    BOOTSTRAP
 ──────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
+  // ── 0. Login sayfasında auth-veil'i anında gizle (hassas içerik yok) ──
+  const startHash = window.location.hash || '#/login';
+  if (startHash === '#/login' || startHash === '' || startHash === '#') {
+    document.getElementById('auth-veil')?.classList.add('av-skip');
+  }
+
   // ── 1. UI'yı ANINDA başlat (Supabase'i bekleme) ──
   App.initCities();
   Router.init();
