@@ -1158,7 +1158,7 @@ const Dock = {
     this.panel.addEventListener('mousemove', (e) => this._onMove(e));
     this.panel.addEventListener('mouseleave', () => this._onLeave());
 
-    this.updateActive();
+    this.syncUI(window.location.hash);
   },
 
   _onMove(e) {
@@ -1522,7 +1522,8 @@ const LoginPage = {
       const { data, error } = await _db.auth.signInWithPassword({ email, password });
       if (error) throw error;
       State.session = data.session;
-      window.Router.navigate('#/slip');
+      Router.authLoaded = true; // mark auth as resolved
+      Router.route();           // auth guard will navigate to #/slip
     } catch (err) {
       errorEl.textContent = err.message === 'Invalid login credentials'
         ? 'E-posta veya şifre hatalı. Lütfen tekrar deneyiniz.'
