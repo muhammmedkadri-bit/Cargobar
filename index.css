@@ -1917,9 +1917,78 @@ input[type="number"] { -moz-appearance: textfield; }
    MOBILE RESPONSIVE STYLES
 ═══════════════════════════════════════ */
 @media (max-width: 768px) {
-  /* Dock mobil uyarlaması iptal edildi, masaüstü görünümü korundu. */
+  /* ─── DOCK MOBIL PREMIUM UYARLAMA ─── */
+  .dock-wrapper {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    padding: 0;
+    transform: none;
+    padding-bottom: env(safe-area-inset-bottom); /* iOS support */
+  }
+  .dock-panel {
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    border: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    justify-content: space-around;
+    padding: 0.75rem 0.5rem 1rem 0.5rem;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.04);
+    -webkit-backdrop-filter: blur(24px) saturate(200%);
+    backdrop-filter: blur(24px) saturate(200%);
+  }
+  .dock-item {
+    width: 60px !important;
+    height: auto !important;
+    gap: 4px;
+    background: transparent !important;
+  }
+  .dock-icon {
+    width: 44px !important;
+    height: 44px !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+  }
+  .dock-icon svg {
+    width: 26px !important;
+    height: 26px !important;
+    color: #1a1d26 !important; /* Unselected icons are black */
+    opacity: 0.6;
+  }
+  
+  /* Seçili Tab (Active) */
+  .dock-item.active .dock-icon {
+    background: var(--amber-bg) !important;
+  }
+  .dock-item.active .dock-icon svg {
+    color: var(--amber) !important; /* Seçili olanlar tema yeşili */
+    opacity: 1;
+  }
+  
+  .dock-label {
+    display: block !important;
+    font-size: 0.65rem !important;
+    font-weight: 600;
+    color: #1a1d26;
+    opacity: 0.6;
+    text-align: center;
+  }
+  .dock-item.active .dock-label {
+    color: var(--amber);
+    opacity: 1;
+  }
+  .dock-divider {
+    display: none;
+  }
+
   .app-container {
-    padding-bottom: 120px; /* Dock yüzen olduğu için alt tarafa biraz daha boşluk ekleyelim */
+    padding-bottom: 100px !important; /* Tab bar boşluğu */
   }
 
   /* ─── GENEL YERLEŞİM ─── */
