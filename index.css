@@ -1917,50 +1917,9 @@ input[type="number"] { -moz-appearance: textfield; }
    MOBILE RESPONSIVE STYLES
 ═══════════════════════════════════════ */
 @media (max-width: 768px) {
-  /* ─── DOCK MOBIL UYARLAMA ─── */
-  .dock-wrapper {
-    bottom: 0;
-    left: 0;
-    transform: none;
-    width: 100%;
-    height: 60px;
-    padding: 0;
-  }
-  .dock-panel {
-    width: 100%;
-    border-radius: 0;
-    border: none;
-    border-top: 1px solid var(--border);
-    justify-content: space-around;
-    padding: 0.25rem 0;
-    height: 100%;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.9);
-  }
-  .dock-item {
-    width: 60px !important;
-    height: 100% !important;
-    gap: 2px;
-  }
-  .dock-icon {
-    width: 28px !important;
-    height: 28px !important;
-    border: none;
-    background: transparent !important;
-    box-shadow: none !important;
-    border-radius: 0;
-  }
-  .dock-icon svg {
-    width: 20px !important;
-    height: 20px !important;
-  }
-  .dock-label {
-    display: block !important;
-    font-size: 0.65rem !important;
-    font-weight: 500;
-  }
-  .dock-divider {
-    display: none;
+  /* Dock mobil uyarlaması iptal edildi, masaüstü görünümü korundu. */
+  .app-container {
+    padding-bottom: 120px; /* Dock yüzen olduğu için alt tarafa biraz daha boşluk ekleyelim */
   }
 
   /* ─── GENEL YERLEŞİM ─── */
@@ -1980,15 +1939,14 @@ input[type="number"] { -moz-appearance: textfield; }
   }
 
   /* ─── KARGO FİŞİ OLUŞTURMA ─── */
-  #view-slip .card-body {
-    grid-template-columns: 1fr !important;
-    gap: 1.5rem !important;
+  .slip-layout {
+    grid-template-columns: 1fr !important; /* Stack form and preview vertically */
+  }
+  .mode-toggle-group {
+    grid-template-columns: 1fr !important; /* Stack customer modes vertically */
   }
   .desi-grid {
     grid-template-columns: repeat(3, 1fr) !important;
-  }
-  .desi-input-wrapper {
-    margin-bottom: 0 !important;
   }
   
   /* Preview wrap */
