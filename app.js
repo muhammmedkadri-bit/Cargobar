@@ -57,7 +57,12 @@ const Toast = {
 const State = {
   session: null,
   customers: [],
-  tkg_counter: 1,
+  prefs: {
+    defaultPrefix: 'TKG',
+    prefixes: ['TKG'],
+    counters: { 'TKG': 1 },
+    activeTemplate: 'default'
+  },
   print_count: 0,
   isPrinting: false,  // Guard flag to prevent router re-render during window.print()
 
@@ -83,8 +88,17 @@ const State = {
 ──────────────────────────────────────── */
 const Store = {
   async load() {
-    // 1. Local counters
-    State.tkg_counter = parseInt(localStorage.getItem('cb_tkg_counter') || '1', 10);
+    // 1. Local counters and prefs
+    const rawPrefs = localStorage.getItem('cb_prefs');
+    if (rawPrefs) {
+      State.prefs = { ...State.prefs, ...JSON.parse(rawPrefs) };
+      if (!State.prefs.counters) State.prefs.counters = { [State.prefs.defaultPrefix]: 1 };
+    } else {
+      // Migrate old tkg_counter if exists
+      const oldTkg = localStorage.getItem('cb_tkg_counter');
+      if (oldTkg) State.prefs.counters['TKG'] = parseInt(oldTkg, 10);
+    }
+    
     State.print_count = parseInt(localStorage.getItem('cb_print_count') || '0', 10);
 
     // 2. Optimistic Load (Offline Mode / Fallback)
@@ -99,6 +113,15 @@ const Store = {
 
     // 3. Fetch from Supabase and update local cache
     try {
+      // Load Prefs
+      const { data: prefData, error: prefErr } = await _db.from('settings').select('*').eq('key', 'app_prefs').single();
+      if (!prefErr && prefData) {
+        State.prefs = { ...State.prefs, ...JSON.parse(prefData.value) };
+        localStorage.setItem('cb_prefs', JSON.stringify(State.prefs));
+      } else if (prefErr && prefErr.code === 'PGRST116') {
+        Store.savePrefs(); // Initialize
+      }
+
       const { data: custData, error: custErr } = await _db.from('customers').select('*').order('created_at', { ascending: false });
       if (!custErr && custData) {
         State.customers = custData;
@@ -110,7 +133,6 @@ const Store = {
         State.company = { ...State.company, ...compData };
         localStorage.setItem('cb_company', JSON.stringify(State.company));
       } else if (compErr && compErr.code !== 'PGRST116') {
-        // Log errors other than "No rows found"
         console.error("Supabase company load error:", compErr);
       }
     } catch (err) {
@@ -163,8 +185,14 @@ const Store = {
     }
   },
 
-  saveTKG() {
-    localStorage.setItem('cb_tkg_counter', String(State.tkg_counter));
+  async savePrefs() {
+    localStorage.setItem('cb_prefs', JSON.stringify(State.prefs));
+    if (!_db || !State.session) return;
+    try {
+      await _db.from('settings').upsert({ key: 'app_prefs', value: JSON.stringify(State.prefs) });
+    } catch (err) {
+      console.error("Error saving prefs:", err);
+    }
   },
   savePrintCount() {
     localStorage.setItem('cb_print_count', String(State.print_count));
@@ -191,15 +219,19 @@ const Store = {
 };
 
 /* ────────────────────────────────────────
-   TKG CODE GENERATOR
+   CARGO CODE GENERATOR (was TKG)
 ──────────────────────────────────────── */
 const TKG = {
   current() {
-    return 'TKG-' + String(State.tkg_counter).padStart(6, '0');
+    const pfx = State.prefs.defaultPrefix;
+    const cnt = State.prefs.counters[pfx] || 1;
+    return pfx + '-' + String(cnt).padStart(6, '0');
   },
   next() {
-    State.tkg_counter++;
-    Store.saveTKG();
+    const pfx = State.prefs.defaultPrefix;
+    if (!State.prefs.counters[pfx]) State.prefs.counters[pfx] = 1;
+    State.prefs.counters[pfx]++;
+    Store.savePrefs();
     return this.current();
   },
   setInputValue() {
@@ -295,7 +327,7 @@ const Router = {
       }
     }
 
-    const views = { '#/login': 'view-login', '#/slip': 'view-slip', '#/customers': 'view-customers', '#/company': 'view-company' };
+    const views = { '#/login': 'view-login', '#/slip': 'view-slip', '#/customers': 'view-customers', '#/company': 'view-company', '#/settings': 'view-settings' };
     const menus = { '#/slip': 'menu-slip', '#/customers': 'menu-customers', '#/company': 'menu-company' };
 
     document.querySelectorAll('.view-pane').forEach(v => v.classList.remove('active'));
@@ -309,7 +341,8 @@ const Router = {
       '#/login': 'Entrio Kargo | Giriş',
       '#/slip': 'Entrio Kargo | Kargo Fişi Oluştur',
       '#/customers': 'Entrio Kargo | Müşteriler',
-      '#/company': 'Entrio Kargo | Şirket'
+      '#/company': 'Entrio Kargo | Şirket',
+      '#/settings': 'Entrio Kargo | Ayarlar'
     };
     document.title = titles[viewKey] || 'Entrio Kargo';
 
@@ -317,6 +350,7 @@ const Router = {
 
     if (viewKey === '#/customers') App.renderCustomersTable();
     if (viewKey === '#/company') App.renderCompanyForm();
+    if (viewKey === '#/settings') Settings.renderPrefixList();
 
     // Sync dock visibility and selection
     if (window.Dock) Dock.syncUI(hash);
@@ -1358,6 +1392,7 @@ const Dock = {
       '#/slip':      'dock-slip',
       '#/customers': 'dock-customers',
       '#/company':   'dock-company',
+      '#/settings':  'dock-settings',
     };
     const activeDockId = Object.keys(dockMap).find(k => hash.startsWith(k));
     if (activeDockId) {
@@ -1602,3 +1637,141 @@ const LoginPage = {
 
 window.LoginPage = LoginPage;
 
+
+/* ────────────────────────────────────────
+   SETTINGS PAGE LOGIC
+──────────────────────────────────────── */
+const Settings = {
+  switchTab(tabId) {
+    document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.settings-pane').forEach(p => p.classList.remove('active'));
+    
+    // Find clicked tab and pane
+    const clickedTab = Array.from(document.querySelectorAll('.settings-tab')).find(t => t.getAttribute('onclick')?.includes(`'${tabId}'`));
+    if (clickedTab) clickedTab.classList.add('active');
+    
+    const pane = document.getElementById(`settings-tab-${tabId}`);
+    if (pane) pane.classList.add('active');
+  },
+
+  renderPrefixList() {
+    const list = document.getElementById('prefix-list');
+    if (!list) return;
+    
+    list.innerHTML = '';
+    const prefs = State.prefs;
+    
+    prefs.prefixes.forEach(pfx => {
+      const isDefault = prefs.defaultPrefix === pfx;
+      const count = prefs.counters[pfx] || 1;
+      
+      const item = document.createElement('div');
+      item.className = `prefix-item ${isDefault ? 'active' : ''}`;
+      
+      item.innerHTML = `
+        <div class="prefix-item-left">
+          <div class="prefix-tag">${pfx}</div>
+          <span style="color:var(--text-muted); font-size:0.9rem;">Sıradaki: ${count}</span>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+          ${!isDefault ? `<button class="btn btn-primary" style="padding: 0.3rem 0.6rem; font-size:0.85rem;" onclick="Settings.setDefaultPrefix('${pfx}')">Varsayılan Yap</button>` : `<span style="color:var(--primary); font-weight:600; font-size:0.9rem; padding:0.3rem 0.6rem;">Varsayılan</span>`}
+          <button class="btn text-danger" style="padding: 0.3rem 0.6rem; font-size:0.85rem; border:1px solid #fecaca; background:white;" onclick="Settings.deletePrefix('${pfx}')">
+            Sil
+          </button>
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  },
+
+  addPrefix() {
+    const input = document.getElementById('new-prefix-input');
+    const val = input.value.trim().toUpperCase();
+    if (!val) return;
+    
+    if (State.prefs.prefixes.includes(val)) {
+      Toast.show('Bu önek zaten mevcut.', 'warning');
+      return;
+    }
+    
+    State.prefs.prefixes.push(val);
+    if (!State.prefs.counters[val]) State.prefs.counters[val] = 1;
+    Store.savePrefs();
+    input.value = '';
+    this.renderPrefixList();
+    Toast.show('Kargo öneki eklendi.', 'success');
+  },
+
+  deletePrefix(pfx) {
+    if (State.prefs.prefixes.length <= 1) {
+      Toast.show('En az bir önek bulunmalıdır.', 'error');
+      return;
+    }
+    if (confirm(`'${pfx}' önekini silmek istediğinize emin misiniz?`)) {
+      State.prefs.prefixes = State.prefs.prefixes.filter(p => p !== pfx);
+      if (State.prefs.defaultPrefix === pfx) {
+        State.prefs.defaultPrefix = State.prefs.prefixes[0];
+      }
+      Store.savePrefs();
+      this.renderPrefixList();
+      Toast.show('Kargo öneki silindi.', 'success');
+    }
+  },
+
+  setDefaultPrefix(pfx) {
+    State.prefs.defaultPrefix = pfx;
+    Store.savePrefs();
+    this.renderPrefixList();
+    Toast.show(`${pfx} varsayılan kargo kodu yapıldı.`, 'success');
+  },
+
+  setTemplate(tpl) {
+    State.prefs.activeTemplate = tpl;
+    Store.savePrefs();
+    document.querySelectorAll('.template-card').forEach(c => {
+      c.classList.toggle('active', c.getAttribute('onclick')?.includes(`'${tpl}'`));
+    });
+    Toast.show('Şablon güncellendi.', 'success');
+  },
+
+  checkResetInput() {
+    const input = document.getElementById('reset-confirm-input');
+    const btn = document.getElementById('reset-btn');
+    if (input.value === 'Tüm verileri sıfırla') {
+      btn.disabled = false;
+    } else {
+      btn.disabled = true;
+    }
+  },
+
+  async executeReset() {
+    if (!_db || !State.session) return;
+    
+    const btn = document.getElementById('reset-btn');
+    btn.innerHTML = 'Sıfırlanıyor...';
+    btn.disabled = true;
+
+    try {
+      // Sadece verileri sil
+      await _db.from('customers').delete().neq('id', '00000000-0000-0000-0000-000000000000'); 
+      await _db.from('company').update({
+        unvan: '', slogan: '', telefon: '', adres: '', il: '', ilce: '', logo: ''
+      }).eq('id', 1);
+      await _db.from('settings').delete().neq('key', 'xyz');
+      
+      // Clear local storage EXCEPT session
+      const keys = Object.keys(localStorage);
+      keys.forEach(k => {
+        if (k.startsWith('cb_')) localStorage.removeItem(k);
+      });
+      
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      Toast.show('Sıfırlama sırasında hata oluştu.', 'error');
+      btn.innerHTML = 'Sistemi Sıfırla';
+      btn.disabled = false;
+    }
+  }
+};
+window.Settings = Settings;
