@@ -655,14 +655,37 @@ const App = {
     document.getElementById(id)?.classList.remove('open');
   },
   async logout() {
+    // 1. Supabase sunucu taraflı token geçersizleştirme
     if (window._db) {
-      await _db.auth.signOut({ scope: 'global' });
-      // signOut localStorage'daki session'ı senkron olarak siler.
-      // Sayfa yenilenince getSession() null döndürecek, router login'e yönlendirecek.
+      try {
+        await _db.auth.signOut({ scope: 'global' });
+      } catch(e) {
+        console.warn('signOut error (ignored):', e);
+      }
     }
+
+    // 2. State temizle
     State.session = null;
     Router.authLoaded = false;
-    window.location.reload();
+
+    // 3. Supabase'in localStorage'a kaydettiği TÜM token'ları manuel sil
+    //    (signOut bazen bunları eksik temizler — kesin çözüm budur)
+    const keysToDelete = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+        keysToDelete.push(key);
+      }
+    }
+    keysToDelete.forEach(k => localStorage.removeItem(k));
+
+    // 4. Login sayfasına yönlendir — reload YAPMIYORUZ çünkü reload
+    //    onAuthStateChange INITIAL_SESSION'ı tekrar tetikler ve
+    //    temizlenmiş olsa bile race condition yaratabilir.
+    //    Bunun yerine hash'i login'e çekip Router'ı tetikliyoruz.
+    window.location.href = window.location.origin + '/#/login';
+    // Kısa gecikme sonrası hard reload — hash navigate tamamlanınca
+    setTimeout(() => window.location.reload(true), 100);
   },
 
   initCities() {
