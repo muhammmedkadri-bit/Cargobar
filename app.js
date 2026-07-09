@@ -814,6 +814,8 @@ const App = {
     document.getElementById(id)?.classList.remove('open');
   },
   async logout() {
+    PageTransition.show('Çıkış Yapılıyor...');
+
     // 1. Supabase sunucu taraflı token geçersizleştirme
     if (window._db) {
       try {
@@ -825,10 +827,8 @@ const App = {
 
     // 2. State temizle
     State.session = null;
-    Router.authLoaded = false;
 
     // 3. Supabase'in localStorage'a kaydettiği TÜM token'ları manuel sil
-    //    (signOut bazen bunları eksik temizler — kesin çözüm budur)
     const keysToDelete = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -838,13 +838,31 @@ const App = {
     }
     keysToDelete.forEach(k => localStorage.removeItem(k));
 
-    // 4. Login sayfasına yönlendir — reload YAPMIYORUZ çünkü reload
-    //    onAuthStateChange INITIAL_SESSION'ı tekrar tetikler ve
-    //    temizlenmiş olsa bile race condition yaratabilir.
-    //    Bunun yerine hash'i login'e çekip Router'ı tetikliyoruz.
-    window.location.href = window.location.origin + '/#/login';
-    // Kısa gecikme sonrası hard reload — hash navigate tamamlanınca
-    setTimeout(() => window.location.reload(true), 100);
+    // 4. Formu temizle
+    const emailEl = document.getElementById('login-email');
+    const passEl = document.getElementById('login-password');
+    if (emailEl) {
+      emailEl.value = '';
+      emailEl.classList.remove('error');
+    }
+    if (passEl) {
+      passEl.value = '';
+      passEl.classList.remove('error');
+    }
+    const errEmail = document.getElementById('email-error');
+    const errPass = document.getElementById('password-error');
+    const errLogin = document.getElementById('login-error');
+    if (errEmail) errEmail.style.display = 'none';
+    if (errPass) errPass.style.display = 'none';
+    if (errLogin) errLogin.style.display = 'none';
+
+    // 5. Login sayfasına yönlendir (hash üzerinden)
+    window.location.hash = '#/login';
+
+    // 6. Biraz bekleyip geçiş ekranını kaldır
+    setTimeout(() => {
+      PageTransition.hide();
+    }, 800);
   },
 
   initCities() {
