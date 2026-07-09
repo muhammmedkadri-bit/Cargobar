@@ -1088,15 +1088,15 @@ const App = {
     data.forEach(c => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><span class="code-badge">${c.kod || '—'}</span></td>
-        <td>
+        <td data-label="Müşteri Kodu"><span class="code-badge">${c.kod || '—'}</span></td>
+        <td data-label="Firma Ünvanı">
           <div class="cell-stack">
             <span class="cell-main">${c.unvan}</span>
           </div>
         </td>
-        <td>${c.ad}</td>
-        <td>${c.telefon}</td>
-        <td>
+        <td data-label="Yetkili">${c.ad}</td>
+        <td data-label="Telefon">${c.telefon}</td>
+        <td data-label="Şehir/İlçe">
           <div class="cell-stack">
             <span class="cell-main">${c.il || '—'}</span>
             <span class="cell-sub">${c.ilce || ''}</span>
