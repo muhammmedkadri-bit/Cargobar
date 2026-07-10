@@ -641,13 +641,13 @@ const Slip = {
     setTimeout(() => {
       window.print();
       
-      // Cleanup after print dialog is closed
+      // Cleanup after print dialog is closed - wait long enough for print to complete
       setTimeout(() => {
         if (document.body.contains(printArea)) {
           document.body.removeChild(printArea);
         }
-      }, 1000);
-    }, 50);
+      }, 30000);
+    }, 100);
 
     // After printing: ONLY advance TKG if we used the current one
     if (tkg === TKG.current()) {
