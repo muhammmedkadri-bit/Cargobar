@@ -283,10 +283,28 @@ async function printShippingLabel(data, copies = 1) {
 }
 
 // ─────────────────────────────────────────────────────────
+// ÖNİZLEME (yazıcıya gitmez, sadece SVG üretir — agent gerekmez)
+// ─────────────────────────────────────────────────────────
+async function previewShippingLabel(data, copies = 1) {
+  const rawPrefs = localStorage.getItem('cb_prefs');
+  let customTemplate = null;
+  if (rawPrefs) {
+    try { customTemplate = JSON.parse(rawPrefs).customTemplate || null; } catch {}
+  }
+  const lbl = await buildLabel(data, customTemplate, copies);
+  const langMod = Settings.labelLang === 'escpos' ? escpos : tsc;
+  const code = langMod.compile(lbl);
+  const svg = langMod.preview(lbl);
+  const validation = langMod.validate(code);
+  return { svg, code, validation };
+}
+
+// ─────────────────────────────────────────────────────────
 window.PrintEngine = {
   Settings,
   checkAgentHealth,
   listPrinters,
   sendTest,
-  printShippingLabel
+  printShippingLabel,
+  previewShippingLabel
 };

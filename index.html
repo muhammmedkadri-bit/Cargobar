@@ -698,12 +698,16 @@
                   <option value="escpos">ESC/POS (fiş yazıcıları veya uyumlu modeller için)</option>
                 </select>
               </div>
-              <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
                 <button class="btn btn-secondary" onclick="PrinterSettings.testConnection()">Bağlantıyı Test Et</button>
                 <button class="btn btn-secondary" onclick="PrinterSettings.testPrint()">Test Etiket Yazdır</button>
+                <button class="btn btn-secondary" onclick="PrinterSettings.previewLabel()">Önizle (Yazdırmadan)</button>
               </div>
               <div id="agent-status" style="font-size: 0.85rem; font-weight: 600; margin-top: 0.5rem; color: var(--text-muted);">
                 Durum kontrolü yapılmadı.
+              </div>
+              <div id="label-preview" style="margin-top: 1rem; max-width: 400px; background: white; border: 1px solid var(--border); border-radius: 4px; padding: 10px; display: none;">
+                <!-- Önizleme SVG buraya yüklenecek -->
               </div>
             </div>
           </div>

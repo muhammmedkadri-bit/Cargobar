@@ -1769,6 +1769,42 @@ const PrinterSettings = {
       statusEl.style.color = '#ef4444';
       Toast.show('Test etiketi yazılamadı.', 'error');
     }
+  },
+  async previewLabel() {
+    this.save();
+    const previewEl = document.getElementById('label-preview');
+    if (!previewEl) return;
+    
+    try {
+      const sample = {
+        tkgCode: typeof TKG !== 'undefined' && TKG.current ? TKG.current() : 'TKG-000001',
+        alici: { unvan: 'Örnek Alıcı A.Ş.', ad: 'Ahmet Yılmaz', tel: '05321234567', adres: 'Örnek Mahallesi, Test Caddesi No:12', il: 'İstanbul', ilce: 'Kadıköy' },
+        gonderici: {
+          unvan: State.company?.unvan || 'Şirket Ünvanı',
+          slogan: State.company?.slogan || '',
+          tel: State.company?.telefon || '',
+          adres: [State.company?.adres, State.company?.ilce, State.company?.il].filter(Boolean).join(', ')
+        },
+        desi: { en: 30, boy: 20, yukseklik: 15, kg: 4, desi: 3, ucret: 4 }
+      };
+      
+      if (!window.PrintEngine || !window.PrintEngine.previewShippingLabel) {
+        throw new Error('Yazdırma motoru önizleme işlevi yüklenemedi.');
+      }
+      
+      const { svg, validation } = await window.PrintEngine.previewShippingLabel(sample, 1);
+      previewEl.innerHTML = svg;
+      previewEl.style.display = 'block';
+      
+      if (validation && validation.errors > 0) {
+        Toast.show(`Doğrulama hatası: ${validation.issues.map(i=>i.message).join(', ')}`, 'error');
+      } else {
+        Toast.show('Önizleme başarıyla oluşturuldu.', 'success');
+      }
+    } catch (err) {
+      console.error(err);
+      Toast.show('Önizleme başarısız: ' + err.message, 'error');
+    }
   }
 };
 window.PrinterSettings = PrinterSettings;
