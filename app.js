@@ -222,22 +222,56 @@ const Store = {
    CARGO CODE GENERATOR (was TKG)
 ──────────────────────────────────────── */
 const TKG = {
+  overridePrefix: null,
+
+  get activePrefix() {
+    return this.overridePrefix || State.prefs.defaultPrefix;
+  },
+
   current() {
-    const pfx = State.prefs.defaultPrefix;
+    const pfx = this.activePrefix;
     const cnt = State.prefs.counters[pfx] || 1;
     return pfx + '-' + String(cnt).padStart(6, '0');
   },
   next() {
-    const pfx = State.prefs.defaultPrefix;
+    const pfx = this.activePrefix;
     if (!State.prefs.counters[pfx]) State.prefs.counters[pfx] = 1;
     State.prefs.counters[pfx]++;
     Store.savePrefs();
+
+    // Fiş yazdırıldıktan sonra varsayılana dön
+    this.overridePrefix = null;
+    this.syncSelectUI();
+
     return this.current();
   },
   setInputValue() {
     const el = document.getElementById('tkg-input');
     if (el) el.value = this.current();
+    this.syncSelectUI();
   },
+  syncSelectUI() {
+    const select = document.getElementById('temp-prefix-select');
+    if (!select) return;
+    select.innerHTML = '';
+    const pfxs = State.prefs.prefixes || [];
+    pfxs.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p + (p === State.prefs.defaultPrefix ? ' (Varsayılan)' : '');
+      if (p === this.activePrefix) opt.selected = true;
+      select.appendChild(opt);
+    });
+  },
+  handlePrefixChange(newPrefix) {
+    if (newPrefix === State.prefs.defaultPrefix) {
+      this.overridePrefix = null;
+    } else {
+      this.overridePrefix = newPrefix;
+    }
+    this.setInputValue();
+    if (window.Slip) Slip.syncSummary();
+  }
 };
 
 /* ────────────────────────────────────────

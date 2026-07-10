@@ -362,8 +362,13 @@
                 </svg>
               </button>
             </div>
-            <p class="text-muted text-small mt-1" style="margin-bottom:1.25rem;">Her yazdırma işleminde otomatik sıralı kod atanır. Manuel değiştirilebilir.</p>
-
+            <p class="text-muted text-small mt-1">Her yazdırma işleminde otomatik sıralı kod atanır. Manuel değiştirilebilir.</p>
+            <div class="mt-2" style="margin-bottom:1.25rem;">
+              <select id="temp-prefix-select" class="form-control" style="font-size: 0.9rem;" onchange="TKG.handlePrefixChange(this.value)">
+                <!-- JavaScript tarafından doldurulacak -->
+              </select>
+              <p class="text-muted text-small mt-1">Sadece geçerli fiş için geçerli olur. Sayfa yenilendiğinde veya fiş yazdırıldığında varsayılana döner.</p>
+            </div>
             <div class="form-section-title">Etiket Adeti</div>
             <div class="copy-count-row" style="margin-bottom:1.25rem;">
               <button class="btn btn-secondary btn-icon" onclick="Slip.adjustCopies(-1)">−</button>
