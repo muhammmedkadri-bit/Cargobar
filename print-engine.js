@@ -11,9 +11,9 @@
  *   <script type="module" src="print-engine.js"></script>
  */
 
-import { label } from 'https://esm.sh/portakal/core';
-import { tsc } from 'https://esm.sh/portakal/lang/tsc';
-import { escpos } from 'https://esm.sh/portakal/lang/escpos';
+import { label } from 'https://esm.sh/portakal';
+import { tsc } from 'https://esm.sh/portakal/tsc';
+import { escpos } from 'https://esm.sh/portakal/escpos';
 import { barcodePNG } from 'https://esm.sh/etiket';
 
 // ─────────────────────────────────────────────────────────
