@@ -14,7 +14,7 @@
 import { label } from 'https://esm.sh/portakal/core';
 import { tsc } from 'https://esm.sh/portakal/lang/tsc';
 import { escpos } from 'https://esm.sh/portakal/lang/escpos';
-import { barcodePNG, qrcodePNG } from 'https://esm.sh/etiket/png';
+import { barcodePNG } from 'https://esm.sh/etiket';
 
 // ─────────────────────────────────────────────────────────
 // AYARLAR (localStorage üzerinden kalıcı; Ayarlar ekranından güncellenir)
@@ -37,6 +37,9 @@ const Settings = {
   get labelLang() { return getSetting(LS_KEYS.labelLang, 'tspl'); },
   set labelLang(v) { localStorage.setItem(LS_KEYS.labelLang, v); }
 };
+
+// Millimetreyi Dot cinsine (203 DPI varsayımıyla) çeviren yardımcı fonksiyon
+const mm = (v) => Math.round(v * 203 / 25.4);
 
 // ─────────────────────────────────────────────────────────
 // GÖRSEL TO MONOCHROME BITMAP DÖNÜŞTÜRÜCÜ
@@ -125,7 +128,10 @@ async function listPrinters() {
 }
 
 async function sendRaw(rawString) {
-  return agentFetch('/print', {\n    method: 'POST',\n    body: JSON.stringify({ data: rawString, encoding: 'utf8' })\n  });
+  return agentFetch('/print', {
+    method: 'POST',
+    body: JSON.stringify({ data: rawString, encoding: 'utf8' })
+  });
 }
 
 async function sendTest(lang) {
@@ -153,7 +159,7 @@ function wrapText(text, maxChars) {
 // ─────────────────────────────────────────────────────────
 // ETİKET TASARIMI (100x100mm)
 // ─────────────────────────────────────────────────────────
-async function buildLabel(data, customTemplateBase64) {
+async function buildLabel(data, customTemplateBase64, copies) {
   const { tkgCode, alici, gonderici, desi } = data;
 
   // Barkodu render et (etiket kütüphanesi monochrome bitmap döner)
@@ -174,25 +180,24 @@ async function buildLabel(data, customTemplateBase64) {
       const receiverTel = toTrUpper(alici?.tel);
       const desiStr = `DESİ: ${desi?.desi || '0'} DS.`;
 
-      let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203 })
+      let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies })
         .image(bgBitmap, { x: 0, y: 0, width: 800, height: 800 })
         
-        // Alıcı Bilgileri (Python koordinatları: x=0.22mm, y=45.34mm, genislik=37.32mm)
-        // portakal.text text-wrapping desteği için maxWidth parametresi dot cinsinden alır
-        .text(receiverTitle, { x: 0.22, y: 45.34, font: '1', size: 1 })
-        .text(receiverAddr, { x: 0.22, y: 53.00, font: '1', size: 1 })
-        .text(receiverTel, { x: 0.22, y: 78.00, font: '1', size: 1 })
+        // Alıcı Bilgileri
+        .text(receiverTitle, { x: mm(0.22), y: mm(45.34), font: '1', size: 1 })
+        .text(receiverAddr, { x: mm(0.22), y: mm(53.00), font: '1', size: 1 })
+        .text(receiverTel, { x: mm(0.22), y: mm(78.00), font: '1', size: 1 })
 
-        // Desi Bilgileri (Python koordinatları: x=51.76mm, y=56.59mm, genislik=37.32mm)
-        .text(`EN : ${desi?.en || '0'}`, { x: 51.76, y: 56.59, font: '1', size: 1 })
-        .text(`BOY : ${desi?.boy || '0'}`, { x: 51.76, y: 61.00, font: '1', size: 1 })
-        .text(`YUKSEKLIK : ${desi?.yukseklik || '0'}`, { x: 51.76, y: 65.50, font: '1', size: 1 })
-        .text(`KILO : ${desi?.kg || '0'}`, { x: 51.76, y: 70.00, font: '1', size: 1 })
-        .text(desiStr, { x: 51.76, y: 76.00, font: '1', size: 1 })
+        // Desi Bilgileri
+        .text(`EN : ${desi?.en || '0'}`, { x: mm(51.76), y: mm(56.59), font: '1', size: 1 })
+        .text(`BOY : ${desi?.boy || '0'}`, { x: mm(51.76), y: mm(61.00), font: '1', size: 1 })
+        .text(`YUKSEKLIK : ${desi?.yukseklik || '0'}`, { x: mm(51.76), y: mm(65.50), font: '1', size: 1 })
+        .text(`KILO : ${desi?.kg || '0'}`, { x: mm(51.76), y: mm(70.00), font: '1', size: 1 })
+        .text(desiStr, { x: mm(51.76), y: mm(76.00), font: '1', size: 1 })
 
-        // Barkod (Python koordinatları: x=30mm, y=86mm)
-        .image(barcode, { x: 30, y: 84, width: 320, height: 80 })
-        .text(tkgCode || '', { x: 50, y: 95, font: '1', size: 1, align: 'center' });
+        // Barkod
+        .image(barcode, { x: mm(30), y: mm(84), width: 320, height: 80 })
+        .text(tkgCode || '', { x: mm(50), y: mm(95), font: '1', size: 1, align: 'center' });
 
       return lbl;
     } catch (e) {
@@ -205,49 +210,40 @@ async function buildLabel(data, customTemplateBase64) {
   const kiloVal = desi?.kg ? `${desi.kg} kg` : '—';
   const desiUnit = desi?.kg > 20 && desi?.ucret === desi?.kg ? 'KG' : 'DESİ';
   
-  let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203 })
+  let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies })
     // Dış Çerçeve
     .box({ x: 0, y: 0, width: 800, height: 800, thickness: 4 })
     
     // Header Bölümü
-    .text(gonderici?.unvan || 'ŞİRKET ÜNVANI', { x: 5, y: 4, size: 2 })
-    .text(gonderici?.slogan || '', { x: 5, y: 10, size: 1 })
-    .line({ x1: 0, y1: 16, x2: 100, y2: 16, thickness: 1 })
+    .text(gonderici?.unvan || 'ŞİRKET ÜNVANI', { x: mm(5), y: mm(4), size: 2 })
+    .text(gonderici?.slogan || '', { x: mm(5), y: mm(10), size: 1 })
+    .line({ x1: mm(0), y1: mm(16), x2: mm(100), y2: mm(16), thickness: 2 })
 
     // Orta Panel Bölücü Çizgi (Dikey)
-    .line({ x1: 85, y1: 16, x2: 85, y2: 78, thickness: 1 })
+    .line({ x1: mm(85), y1: mm(16), x2: mm(85), y2: mm(78), thickness: 2 })
 
     // GÖNDERİCİ
-    .text('GÖNDERİCİ', { x: 4, y: 18, size: 1, reverse: true })
-    .text(gonderici?.unvan || '', { x: 4, y: 22, size: 1 })
-    .text(wrapText(gonderici?.adres || '', 36), { x: 4, y: 26, size: 1 })
+    .text('GÖNDERİCİ', { x: mm(4), y: mm(18), size: 1, reverse: true })
+    .text(gonderici?.unvan || '', { x: mm(4), y: mm(22), size: 1 })
+    .text(wrapText(gonderici?.adres || '', 36), { x: mm(4), y: mm(26), size: 1 })
     
-    .line({ x1: 0, y1: 45, x2: 85, y2: 45, thickness: 1 })
+    .line({ x1: mm(0), y1: mm(45), x2: mm(85), y2: mm(45), thickness: 2 })
 
     // ALICI
-    .text('ALICI', { x: 4, y: 47, size: 1, reverse: true })
-    .text(alici?.unvan || '', { x: 4, y: 51, size: 1 })
-    .text(wrapText(alici?.adres || '', 36), { x: 4, y: 55, size: 1 })
-    .text(`${alici?.ilce || ''} / ${alici?.il || ''}`, { x: 4, y: 68, size: 1 })
+    .text('ALICI', { x: mm(4), y: mm(47), size: 1, reverse: true })
+    .text(alici?.unvan || '', { x: mm(4), y: mm(51), size: 1 })
+    .text(wrapText(alici?.adres || '', 36), { x: mm(4), y: mm(55), size: 1 })
+    .text(`${alici?.ilce || ''} / ${alici?.il || ''}`, { x: mm(4), y: mm(68), size: 1 })
 
     // Dikey Barkod Bölümü (Sağ Sütun)
-    // portakal Z veya T dillerinde görsel döndürme desteği sunar. 90 derece dikey barkod ekliyoruz.
-    .image(barcode, { x: 87, y: 20, width: 80, height: 320, rotation: 90 })
-    .text(tkgCode || '', { x: 97, y: 45, size: 1, rotation: 90 })
+    .image(barcode, { x: mm(87), y: mm(20), width: 80, height: 320, rotation: 90 })
+    .text(tkgCode || '', { x: mm(97), y: mm(45), size: 1, rotation: 90 })
 
-    .line({ x1: 0, y1: 78, x2: 100, y2: 78, thickness: 1 })
+    .line({ x1: mm(0), y1: mm(78), x2: mm(100), y2: mm(78), thickness: 2 })
 
     // Kargo Desi/Kilo Tablosu
-    .text(`${desiVal} ${desiUnit}`, { x: 5, y: 81, size: 2 })
-    .text(`${kiloVal} AGIRLIK`, { x: 35, y: 81, size: 2 });
-
-    // QR Code
-    try {
-      const qr = qrcodePNG('https://www.tantex.com.tr', { size: 120 });
-      lbl = lbl.image(qr, { x: 72, y: 80, width: 120, height: 120 });
-    } catch(e) {
-      console.error('QR code generation failed:', e);
-    }
+    .text(`${desiVal} ${desiUnit}`, { x: mm(5), y: mm(81), size: 2 })
+    .text(`${kiloVal} AGIRLIK`, { x: mm(35), y: mm(81), size: 2 });
 
   return lbl;
 }
@@ -279,18 +275,18 @@ async function printShippingLabel(data, copies = 1) {
       console.error('Could not parse prefs for custom template:', e);
     }
   }
-
-  const lbl = await buildLabel(data, customTemplate);
-  let raw = compile(lbl);
-
-  // Kopya sayısını ayarlıyoruz
-  if (Settings.labelLang === 'tspl' && copies > 1) {
-    raw = raw.replace(/PRINT\s+1\s*,\s*1/i, `PRINT 1,${copies}`);
-  }
+  const lbl = await buildLabel(data, customTemplate, copies);
+  const raw = compile(lbl);
 
   await sendRaw(raw);
   return true;
 }
 
 // ─────────────────────────────────────────────────────────
-window.PrintEngine = {\n  Settings,\n  checkAgentHealth,\n  listPrinters,\n  sendTest,\n  printShippingLabel\n};
+window.PrintEngine = {
+  Settings,
+  checkAgentHealth,
+  listPrinters,
+  sendTest,
+  printShippingLabel
+};
