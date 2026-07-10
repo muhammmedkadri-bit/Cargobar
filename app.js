@@ -637,8 +637,10 @@ const Slip = {
       iframe.style.position = 'fixed';
       iframe.style.right = '0';
       iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
+      iframe.style.width = '100mm';
+      iframe.style.height = '100mm';
+      iframe.style.opacity = '0';
+      iframe.style.pointerEvents = 'none';
       iframe.style.border = '0';
       document.body.appendChild(iframe);
 
@@ -653,8 +655,8 @@ const Slip = {
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
           <style>
-            @page { size: 100mm 100mm; margin: 0 !important; }
-            html, body { margin: 0 !important; padding: 0 !important; background: #fff; }
+            @page { size: 100mm 100mm; margin: 0; }
+            html, body { margin: 0 !important; padding: 0 !important; background: #fff; width: 100mm !important; height: 100mm !important; }
           </style>
         </head>
         <body>
