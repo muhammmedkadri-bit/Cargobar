@@ -630,56 +630,23 @@ const Slip = {
     State.print_count += copies;
     Store.savePrintCount();
 
-    // To completely eliminate the visual flicker (where the UI disappears because of @media print),
-    // we use a hidden iframe to execute the print dialog. This isolates the print layout from the main screen.
+    // Create a temporary print container in the main document
+    // We do this in the main document instead of an iframe because Chrome's PDF renderer
+    // strictly requires @page rules to be on the top-level window to enforce "Margin: None" automatically.
+    const printArea = document.createElement('div');
+    printArea.id = 'print-area';
+    printArea.innerHTML = area.innerHTML;
+    document.body.appendChild(printArea);
+
     setTimeout(() => {
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '100mm';
-      iframe.style.height = '100mm';
-      iframe.style.opacity = '0';
-      iframe.style.pointerEvents = 'none';
-      iframe.style.border = '0';
-      document.body.appendChild(iframe);
-
-      const doc = iframe.contentWindow.document;
-      doc.open();
-      doc.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <link rel="stylesheet" href="index.css">
-          <link rel="preconnect" href="https://fonts.googleapis.com">
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-          <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
-          <style>
-            @page { size: 100mm 100mm; margin: 0; }
-            html, body { margin: 0 !important; padding: 0 !important; background: #fff; width: 100mm !important; height: 100mm !important; }
-          </style>
-        </head>
-        <body>
-          <div id="print-area">
-            ${area.innerHTML}
-          </div>
-          <script>
-            window.onload = function() {
-              setTimeout(function() {
-                window.print();
-              }, 50);
-            };
-          </script>
-        </body>
-        </html>
-      `);
-      doc.close();
-
-      // Cleanup iframe after a generous delay so it doesn't interrupt the print dialog
-      setTimeout(() => {
-        if (document.body.contains(iframe)) document.body.removeChild(iframe);
-      }, 10000);
+      window.print();
       
+      // Cleanup after print dialog is closed
+      setTimeout(() => {
+        if (document.body.contains(printArea)) {
+          document.body.removeChild(printArea);
+        }
+      }, 1000);
     }, 50);
 
     // After printing: ONLY advance TKG if we used the current one
