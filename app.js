@@ -638,16 +638,51 @@ const Slip = {
     printArea.innerHTML = area.innerHTML;
     document.body.appendChild(printArea);
 
-    setTimeout(() => {
-      window.print();
-      
-      // Cleanup after print dialog is closed - wait long enough for print to complete
-      setTimeout(() => {
-        if (document.body.contains(printArea)) {
-          document.body.removeChild(printArea);
+    // Use html2canvas to rasterize the label into a full-bleed image.
+    // This way the printer driver sees an IMAGE filling 100% of the page,
+    // and cannot apply hardware margins to the content inside.
+    if (window.html2canvas) {
+      const labelPage = area.querySelector('.label-page');
+      html2canvas(labelPage, {
+        scale: 4,           // 4x scale = ~400dpi
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width:  labelPage.offsetWidth,
+        height: labelPage.offsetHeight,
+        logging: false,
+      }).then(canvas => {
+        const dataUrl = canvas.toDataURL('image/png');
+        
+        // Open a minimal print page that is just the image filling 100% of the page
+        const printWin = window.open('', '_blank', 'width=1,height=1');
+        if (!printWin) {
+          // Popup blocked — fallback to normal print
+          window.print();
+          return;
         }
-      }, 30000);
-    }, 100);
+        printWin.document.write(`<!DOCTYPE html><html><head>
+          <style>
+            @page { size: 100mm 100mm; margin: 0; }
+            html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #fff; }
+            img { width: 100%; height: 100%; display: block; object-fit: fill; }
+          </style>
+        </head><body>
+          <img src="${dataUrl}" onload="window.print(); window.close();">
+        </body></html>`);
+        printWin.document.close();
+      });
+    } else {
+      // Fallback: direct window.print()
+      window.print();
+    }
+
+    // Cleanup print area after generous delay
+    setTimeout(() => {
+      if (document.body.contains(printArea)) {
+        document.body.removeChild(printArea);
+      }
+    }, 5000);
 
     // After printing: ONLY advance TKG if we used the current one
     if (tkg === TKG.current()) {
