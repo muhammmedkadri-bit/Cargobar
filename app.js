@@ -630,11 +630,14 @@ const Slip = {
     State.print_count += copies;
     Store.savePrintCount();
 
-    // Create a temporary print container in the main document
-    // We do this in the main document instead of an iframe because Chrome's PDF renderer
-    // strictly requires @page rules to be on the top-level window to enforce "Margin: None" automatically.
+    // Create a temporary print container in the main document, off-screen
     const printArea = document.createElement('div');
-    printArea.id = 'print-area';
+    printArea.style.position = 'absolute';
+    printArea.style.left = '-9999px';
+    printArea.style.top = '-9999px';
+    printArea.style.width = '100mm';
+    printArea.style.height = '100mm';
+    printArea.style.background = '#fff';
     printArea.innerHTML = area.innerHTML;
     document.body.appendChild(printArea);
 
@@ -642,39 +645,43 @@ const Slip = {
     // This way the printer driver sees an IMAGE filling 100% of the page,
     // and cannot apply hardware margins to the content inside.
     if (window.html2canvas) {
-      const labelPage = area.querySelector('.label-page');
-      html2canvas(labelPage, {
-        scale: 4,           // 4x scale = ~400dpi
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width:  labelPage.offsetWidth,
-        height: labelPage.offsetHeight,
-        logging: false,
-      }).then(canvas => {
-        const dataUrl = canvas.toDataURL('image/png');
-        
-        // Open a minimal print page that is just the image filling 100% of the page
-        const printWin = window.open('', '_blank', 'width=1,height=1');
-        if (!printWin) {
-          // Popup blocked — fallback to normal print
-          window.print();
-          return;
-        }
-        printWin.document.write(`<!DOCTYPE html><html><head>
-          <style>
-            @page { size: 100mm 100mm; margin: 0; }
-            html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #fff; }
-            img { width: 100%; height: 100%; display: block; object-fit: fill; }
-          </style>
-        </head><body>
-          <img src="${dataUrl}" onload="window.print(); window.close();">
-        </body></html>`);
-        printWin.document.close();
-      });
+      const labelPage = printArea.querySelector('.label-page');
+      
+      // Ensure SVG barcodes are fully rendered before canvas
+      setTimeout(() => {
+        html2canvas(labelPage, {
+          scale: 4,           // 4x scale = ~400dpi
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        }).then(canvas => {
+          const dataUrl = canvas.toDataURL('image/png');
+          
+          // Open a minimal print page that is just the image filling 100% of the page
+          const printWin = window.open('', '_blank', 'width=800,height=800');
+          if (!printWin) {
+            // Popup blocked — fallback to normal print (will use the old CSS method)
+            printArea.id = 'print-area'; // apply print CSS rules
+            window.print();
+            return;
+          }
+          printWin.document.write(`<!DOCTYPE html><html><head>
+            <style>
+              @page { size: 100mm 100mm; margin: 0; }
+              html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #fff; overflow: hidden; }
+              img { width: 100%; height: 100%; display: block; object-fit: cover; }
+            </style>
+          </head><body onload="setTimeout(function(){ window.print(); window.close(); }, 500)">
+            <img src="${dataUrl}">
+          </body></html>`);
+          printWin.document.close();
+        });
+      }, 100); // slight delay for DOM rendering
     } else {
       // Fallback: direct window.print()
-      window.print();
+      printArea.id = 'print-area';
+      setTimeout(() => window.print(), 100);
     }
 
     // Cleanup print area after generous delay
