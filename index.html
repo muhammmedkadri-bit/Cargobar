@@ -586,6 +586,7 @@
         <div class="settings-tabs">
           <button class="settings-tab active" onclick="Settings.switchTab('code')">Kargo Kodu</button>
           <button class="settings-tab" onclick="Settings.switchTab('template')">Şablon Seçimi</button>
+          <button class="settings-tab" onclick="Settings.switchTab('printer')">Yazıcı Ajanı</button>
           <button class="settings-tab text-danger" onclick="Settings.switchTab('reset')">Sıfırlama</button>
         </div>
 
@@ -671,6 +672,38 @@
               <div id="custom-template-preview-container" style="margin-top: 1rem; display: none;">
                 <p style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;">Yüklü Şablon:</p>
                 <img id="custom-template-img" src="" style="width: 100px; height: 100px; object-fit: contain; border: 1px solid var(--border); border-radius: 4px;">
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: Yazıcı Ajanı -->
+          <div id="settings-tab-printer" class="settings-pane">
+            <h3 style="margin-bottom: 1rem; font-weight: 600;">Yazıcı Ajanı</h3>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.95rem;">
+              Yerel bilgisayarınızda çalışan yazdırma ajanı (print-agent) yapılandırmasını yönetin.
+            </p>
+            <div class="form-stack" style="max-width: 420px; display: flex; flex-direction: column; gap: 1rem;">
+              <div>
+                <label class="form-label">Ajan Adresi</label>
+                <input id="agent-url" type="text" class="form-control" placeholder="http://localhost:9198" onchange="PrinterSettings.save()">
+              </div>
+              <div>
+                <label class="form-label">API Token (X-Print-Token)</label>
+                <input id="agent-token" type="text" class="form-control" placeholder="Ajanın config.json dosyasındaki apiToken" onchange="PrinterSettings.save()">
+              </div>
+              <div>
+                <label class="form-label">Etiket Dili</label>
+                <select id="agent-lang" class="form-control" onchange="PrinterSettings.save()">
+                  <option value="tspl">TSPL (Zjiang etiket modelleri için varsayılan)</option>
+                  <option value="escpos">ESC/POS (fiş yazıcıları veya uyumlu modeller için)</option>
+                </select>
+              </div>
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                <button class="btn btn-secondary" onclick="PrinterSettings.testConnection()">Bağlantıyı Test Et</button>
+                <button class="btn btn-secondary" onclick="PrinterSettings.testPrint()">Test Etiket Yazdır</button>
+              </div>
+              <div id="agent-status" style="font-size: 0.85rem; font-weight: 600; margin-top: 0.5rem; color: var(--text-muted);">
+                Durum kontrolü yapılmadı.
               </div>
             </div>
           </div>
@@ -916,6 +949,7 @@
 
 <!-- App Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module" src="print-engine.js"></script>
 <script src="data.js"></script>
 <script src="mock_data.js"></script>
 <script src="app.js"></script>

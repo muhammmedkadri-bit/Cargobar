@@ -1,0 +1,17 @@
+{
+  "name": "cargobar-print-agent",
+  "version": "1.0.0",
+  "description": "Cargobar için yerel USB termal yazıcı ajanı (100x100mm etiket, TSPL/ESC-POS raw print)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "install-service": "node install-service.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  },
+  "optionalDependencies": {
+    "node-windows": "^1.0.0-beta.8"
+  }
+}

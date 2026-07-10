@@ -408,6 +408,7 @@ const Router = {
     if (viewKey === '#/settings') {
       Settings.renderPrefixList();
       Settings.renderCustomTemplate();
+      if (window.PrinterSettings) window.PrinterSettings.load();
     }
 
     // Sync dock visibility and selection
@@ -610,8 +611,53 @@ const Slip = {
     }
   },
 
-  executePrint(data) {
-    // Etiket yazdırma motoru silindi. Yeni motor bekleniyor...
+  async executePrint(data) {
+    const { formData, desiData, copies, tkg } = data;
+    
+    const labelData = {
+      tkgCode: tkg,
+      alici: {
+        unvan: formData.unvan,
+        ad: formData.ad,
+        tel: formData.telefon,
+        adres: formData.adres,
+        il: formData.il,
+        ilce: formData.ilce
+      },
+      gonderici: {
+        unvan: State.company.unvan,
+        slogan: State.company.slogan,
+        tel: State.company.telefon,
+        adres: [State.company.adres, State.company.ilce, State.company.il].filter(Boolean).join(', ')
+      },
+      desi: desiData
+    };
+
+    try {
+      if (!window.PrintEngine) {
+        throw new Error('Yazıcı motoru (PrintEngine) tarayıcıda bulunamadı.');
+      }
+      
+      // UI loader göster
+      PageTransition.show('Etiket yazdırılıyor...');
+      
+      await window.PrintEngine.printShippingLabel(labelData, copies);
+      Toast.show('Etiket başarıyla yazıcıya gönderildi.', 'success');
+      
+      // Sayaç ve istatistikleri güncelle
+      State.print_count += copies;
+      Store.savePrintCount();
+      
+      if (tkg === TKG.current()) {
+        TKG.next();
+      }
+      Slip.syncSummary();
+    } catch (err) {
+      console.error(err);
+      App.showAlert('Yazdırma Hatası', `Yazıcı ajanı ile etiket yazdırılamadı:<br><br><b style="color:#ef4444;">${err.message}</b>`);
+    } finally {
+      PageTransition.hide();
+    }
   }
 };
 
@@ -1659,3 +1705,71 @@ const Settings = {
   }
 };
 window.Settings = Settings;
+
+/* ────────────────────────────────────────
+   PRINTER AGENT SETTINGS
+──────────────────────────────────────── */
+const PrinterSettings = {
+  load() {
+    if (!window.PrintEngine) return;
+    const urlInput = document.getElementById('agent-url');
+    const tokenInput = document.getElementById('agent-token');
+    const langSelect = document.getElementById('agent-lang');
+    
+    if (urlInput) urlInput.value = window.PrintEngine.Settings.agentUrl;
+    if (tokenInput) tokenInput.value = window.PrintEngine.Settings.agentToken;
+    if (langSelect) langSelect.value = window.PrintEngine.Settings.labelLang;
+  },
+  save() {
+    if (!window.PrintEngine) return;
+    const urlInput = document.getElementById('agent-url');
+    const tokenInput = document.getElementById('agent-token');
+    const langSelect = document.getElementById('agent-lang');
+    
+    if (urlInput) window.PrintEngine.Settings.agentUrl = urlInput.value.trim();
+    if (tokenInput) window.PrintEngine.Settings.agentToken = tokenInput.value.trim();
+    if (langSelect) window.PrintEngine.Settings.labelLang = langSelect.value;
+  },
+  async testConnection() {
+    this.save();
+    const statusEl = document.getElementById('agent-status');
+    if (!statusEl) return;
+    
+    statusEl.textContent = 'Bağlantı test ediliyor...';
+    statusEl.style.color = 'var(--text-muted)';
+    
+    const ok = await window.PrintEngine.checkAgentHealth();
+    if (ok) {
+      statusEl.textContent = '✅ Yazıcı ajanına başarıyla bağlanıldı!';
+      statusEl.style.color = 'var(--primary)';
+      Toast.show('Yazıcı ajanı bağlantısı başarılı.', 'success');
+    } else {
+      statusEl.textContent = '❌ Yazıcı ajanı bulunamadı! Servisin çalışıp çalışmadığını kontrol edin.';
+      statusEl.style.color = '#ef4444';
+      Toast.show('Yazıcı ajanı bağlantısı başarısız.', 'error');
+    }
+  },
+  async testPrint() {
+    this.save();
+    const statusEl = document.getElementById('agent-status');
+    if (!statusEl) return;
+    
+    statusEl.textContent = 'Test etiketi gönderiliyor...';
+    statusEl.style.color = 'var(--text-muted)';
+    
+    try {
+      const lang = window.PrintEngine.Settings.labelLang;
+      await window.PrintEngine.sendTest(lang);
+      statusEl.textContent = `✅ Test etiketi (${lang.toUpperCase()}) başarıyla gönderildi.`;
+      statusEl.style.color = 'var(--primary)';
+      Toast.show('Test etiketi yazıcıya gönderildi.', 'success');
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = `❌ Test yazdırma hatası: ${err.message}`;
+      statusEl.style.color = '#ef4444';
+      Toast.show('Test etiketi yazılamadı.', 'error');
+    }
+  }
+};
+window.PrinterSettings = PrinterSettings;
+
