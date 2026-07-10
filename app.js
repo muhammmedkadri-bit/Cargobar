@@ -683,16 +683,54 @@ const LabelBuilder = {
     const page = document.createElement('div');
     page.className = 'label-page';
     
-    // Apply custom template if exists
+    // -------------------------------------------------------------
+    // KUSURSUZ PYTHON UYARLAMASI: ÖZEL ŞABLON (ABSOLUTE KOORDİNATLAR)
+    // -------------------------------------------------------------
     if (State.prefs && State.prefs.customTemplate) {
       page.classList.add('has-custom-bg');
       page.style.backgroundImage = `url(${State.prefs.customTemplate})`;
       page.style.backgroundSize = '100% 100%';
       page.style.backgroundRepeat = 'no-repeat';
       page.style.backgroundPosition = 'center';
-    }
+      page.style.position = 'relative'; // Anchor for absolute children
 
-    // Desi/Weight display
+      // Türkçe i/İ düzeltmeli Büyük Harf (Python'daki gibi)
+      const toTrUpper = (str) => (str || '').replace(/i/g, 'İ').toUpperCase();
+      
+      const firmaAdi = toTrUpper(c.unvan);
+      const adres = toTrUpper([c.adres, c.ilce, c.il].filter(Boolean).join(', '));
+      const telefon = toTrUpper(c.telefon);
+      const desiStr = `DESİ: ${desi.desi || '0'} DS.`;
+
+      // HTML'i Python koordinatlarına (mm) göre birebir oluştur
+      page.innerHTML = `
+        <!-- ALICI BİLGİLERİ -->
+        <div style="position: absolute; left: 0.22mm; top: 45.34mm; width: 37.32mm; font-family: Arial, sans-serif; font-size: 9pt; font-weight: bold; line-height: 3.5mm; color: #000; overflow: hidden;">
+          ${this.esc(firmaAdi)}<br><br>
+          ${this.esc(adres)}<br><br>
+          ${this.esc(telefon)}
+        </div>
+
+        <!-- DESİ BİLGİLERİ -->
+        <div style="position: absolute; left: 51.76mm; top: 56.59mm; width: 37.32mm; font-family: Arial, sans-serif; font-size: 9pt; font-weight: bold; line-height: 3.5mm; color: #000;">
+          <div style="display: flex; justify-content: space-between;"><span>EN :</span><span>${desi.en || '0'}</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>BOY :</span><span>${desi.boy || '0'}</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>YÜKSEKLİK :</span><span>${desi.yukseklik || '0'}</span></div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 1mm;"><span>KİLO :</span><span>${desi.kg || '0'}</span></div>
+          <div>${desiStr}</div>
+        </div>
+
+        <!-- BARKOD VE SİPARİŞ NO -->
+        <div style="position: absolute; left: 30mm; bottom: 4mm; text-align: center; width: 40mm;">
+          <svg class="barcode-svg" data-val="${tkg}"></svg>
+          <div style="font-family: Arial, sans-serif; font-size: 8pt; margin-top: 0.5mm; font-weight: normal;">${tkg}</div>
+        </div>
+      `;
+      return page;
+    }
+    // -------------------------------------------------------------
+
+    // Desi/Weight display (Normal Entrio Şablonu)
     const desiVal  = desi.ucret !== null ? desi.ucret : '—';
     const kiloVal  = desi.kg    ? `${desi.kg} kg` : '—';
     const desiUnit = desi.kg > 20 && desi.ucret === desi.kg ? 'KG' : 'DESİ';
