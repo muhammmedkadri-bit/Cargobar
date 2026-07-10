@@ -682,60 +682,62 @@ const LabelBuilder = {
     page.innerHTML = `
       <div class="label-inner">
 
-        <!-- HEADER: Logo (Left) + Şirket Ünvanı (Right) -->
-        <div class="label-header" style="align-items:center;">
-          <div style="width: 32mm; height: 12mm; display:flex; align-items:center;">
+        <!-- HEADER: Logo (Left) + Şirket Ünvanı (Right) — height ~14mm -->
+        <div class="label-header">
+          <div style="width:28mm; height:11mm; display:flex; align-items:center; flex-shrink:0;">
             ${hasLogo
-              ? `<img src="${co.logo}" style="max-height:12mm; max-width:32mm; object-fit:contain; display:block; filter: brightness(0);">`
-              : ``
+              ? `<img src="${co.logo}" style="max-height:11mm; max-width:28mm; object-fit:contain; display:block; filter:brightness(0);">`
+              : `<span style="font-family:'Oswald',sans-serif; font-size:7pt; font-weight:700; color:#000;">${this.esc(coName)}</span>`
             }
           </div>
-          <div style="flex-grow:1; text-align:right; overflow:hidden;">
-            <div class="label-logo-text" style="font-family:'Oswald', sans-serif; font-weight:700;">${this.esc(coName)}</div>
-            ${coSlogan ? `<div class="label-logo-sub" style="margin-top:1mm; font-family:'Oswald', sans-serif; font-weight:400;">${this.esc(coSlogan)}</div>` : ''}
+          <div style="flex-grow:1; text-align:right; overflow:hidden; padding-left:2mm;">
+            <div class="label-logo-text" style="font-family:'Oswald',sans-serif; font-weight:700;">${this.esc(coName)}</div>
+            ${coSlogan ? `<div class="label-logo-sub" style="font-family:'Oswald',sans-serif;">${this.esc(coSlogan)}</div>` : ''}
           </div>
         </div>
 
-        <!-- MIDDLE: Sender, Receiver & Barcode -->
-        <div style="display: flex; flex-grow: 1;">
-          
-          <!-- Left Col (Sender + Receiver) -->
-          <div style="flex-grow: 1; padding-right: 4mm; display: flex; flex-direction: column;">
+        <!-- MIDDLE: Sender + Receiver (left) + Barcode (right) — flex-grow -->
+        <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
+
+          <!-- Left Col: Sender + Receiver -->
+          <div style="flex:1 1 0; min-width:0; display:flex; flex-direction:column; padding-right:2mm; overflow:hidden;">
+
             <!-- GÖNDERİCİ -->
             <div class="label-section">
               <div class="label-section-tag">
-                <img src="gonderici.svg" style="width:10pt; height:10pt; margin-right:1mm; vertical-align:middle; display:inline-block;" />
+                <img src="gonderici.svg" style="width:8pt; height:8pt; margin-right:1mm; vertical-align:middle;" />
                 GÖNDERİCİ
               </div>
               <div class="label-sender-name">${this.esc(coName)}</div>
               ${coAdres ? `<div class="label-sender-addr">${this.esc(coAdres)}</div>` : ''}
               ${coTel   ? `<div class="label-sender-addr">${this.esc(coTel)}</div>` : ''}
             </div>
-            
+
             <!-- ALICI -->
-            <div class="label-section" style="flex-grow: 1; border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+            <div style="flex:1 1 0; min-height:0; overflow:hidden;">
               <div class="label-section-tag">
-                <img src="alici.svg" style="width:10pt; height:10pt; margin-right:1mm; vertical-align:middle; display:inline-block;" />
-                Alıcı
+                <img src="alici.svg" style="width:8pt; height:8pt; margin-right:1mm; vertical-align:middle;" />
+                ALICI
               </div>
               <div class="label-recv-title">${this.esc(c.unvan)}</div>
-              <div class="label-recv-contact">${this.esc(c.ad)} &nbsp;|&nbsp; ${this.esc(c.telefon)}</div>
+              <div class="label-recv-contact">${this.esc(c.ad ? c.ad + ' \u00a0|\u00a0 ' : '') + this.esc(c.telefon)}</div>
               <div class="label-recv-addr">${this.esc(c.adres)}</div>
               <div class="label-recv-city">${this.esc(c.ilce)} / ${this.esc(c.il)}</div>
             </div>
+
           </div>
-          
-          <!-- Right Col (Barcode) -->
-          <div style="width: 16mm; position: relative; flex-shrink: 0;">
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(90deg); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 42mm;">
-              <svg class="barcode-svg" data-value="${tkg}" style="width: 100% !important; height: auto !important; display:block; margin:0; padding:0;"></svg>
-              <div style="font-family:monospace; font-size:6.5pt; color:#333; margin-top:1.5mm; text-align:center; line-height:1; letter-spacing:0.5px;">${tkg}</div>
+
+          <!-- Right Col: Vertical Barcode — 15mm wide -->
+          <div style="width:15mm; flex-shrink:0; position:relative; overflow:hidden;">
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(90deg); width:44mm; display:flex; flex-direction:column; align-items:center;">
+              <svg class="barcode-svg" data-value="${tkg}" style="width:100% !important; height:auto !important; display:block;"></svg>
+              <div style="font-family:monospace; font-size:6pt; color:#333; margin-top:1mm; text-align:center; letter-spacing:0.3px;">${tkg}</div>
             </div>
           </div>
-          
+
         </div>
 
-        <!-- KARGO BİLGİLERİ -->
+        <!-- KARGO BİLGİLERİ ROW — ~8mm -->
         <div class="label-cargo-row">
           <div class="label-cargo-cell">
             <div class="label-cargo-val">${desiVal}</div>
@@ -754,25 +756,23 @@ const LabelBuilder = {
           </div>` : ''}
         </div>
 
-        <!-- BOTTOM: QR and Icons -->
-        <div class="label-bottom" style="display:flex; justify-content:space-between; align-items:center; margin-top:auto; padding-top:2mm;">
-          <!-- Left: QR -->
+        <!-- BOTTOM: QR (left) + Icons (right) — ~14mm -->
+        <div class="label-bottom">
           <div style="display:flex; flex-direction:column; align-items:flex-start;">
-            <div class="qrcode-div" data-value="https://www.tantex.com.tr" style="margin-bottom:1mm;"></div>
-            <div style="font-family:monospace; font-size:6.5pt; color:#333; line-height:1;">www.tantex.com.tr</div>
+            <div class="qrcode-div" data-value="https://www.tantex.com.tr" style="margin-bottom:0.5mm;"></div>
+            <div style="font-family:monospace; font-size:5.5pt; color:#333; line-height:1;">www.tantex.com.tr</div>
           </div>
-          
-          <!-- Right: Packaging Icons -->
-          <div style="display:flex; gap:2.5mm; align-items:center;">
+
+          <div style="display:flex; gap:2mm; align-items:center;">
             <!-- This Way Up -->
-            <svg viewBox="0 0 100 100" style="width:11mm; height:11mm;">
+            <svg viewBox="0 0 100 100" style="width:10mm; height:10mm;">
               <rect x="5" y="5" width="90" height="90" rx="12" fill="none" stroke="#000" stroke-width="4"/>
               <rect x="18" y="70" width="64" height="8" fill="#000"/>
               <polygon points="34,22 18,46 27,46 27,66 41,66 41,46 50,46" fill="#000"/>
               <polygon points="66,22 50,46 59,46 59,66 73,66 73,46 82,46" fill="#000"/>
             </svg>
             <!-- Fragile -->
-            <svg viewBox="0 0 100 100" style="width:11mm; height:11mm;">
+            <svg viewBox="0 0 100 100" style="width:10mm; height:10mm;">
               <rect x="5" y="5" width="90" height="90" rx="12" fill="none" stroke="#000" stroke-width="4"/>
               <path d="M 28 25 C 28 45 35 55 50 55 C 65 55 72 45 72 25 Z" fill="#000"/>
               <rect x="46" y="55" width="8" height="20" fill="#000"/>
@@ -780,7 +780,7 @@ const LabelBuilder = {
               <polygon points="56,23 44,38 54,38 42,50 48,50 60,34 50,34" fill="#fff"/>
             </svg>
             <!-- Keep Dry -->
-            <svg viewBox="0 0 100 100" style="width:11mm; height:11mm;">
+            <svg viewBox="0 0 100 100" style="width:10mm; height:10mm;">
               <rect x="5" y="5" width="90" height="90" rx="12" fill="none" stroke="#000" stroke-width="4"/>
               <path d="M 15 52 C 15 10 85 10 85 52 Q 76.25 45 67.5 52 Q 58.75 45 50 52 Q 41.25 45 32.5 52 Q 23.75 45 15 52 Z" fill="#000"/>
               <path d="M 50 47 L 50 72 C 50 78 58 78 58 72" fill="none" stroke="#000" stroke-width="4" stroke-linecap="round"/>
@@ -794,6 +794,7 @@ const LabelBuilder = {
       </div>
     `;
     return page;
+
   },
 
   esc(str) {
