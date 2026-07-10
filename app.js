@@ -642,41 +642,22 @@ const Slip = {
     printArea.style.height = '100mm';
     printArea.style.background = '#fff';
     printArea.innerHTML = area.innerHTML;
+    printArea.id = 'print-area'; // This activates the print CSS
     document.body.appendChild(printArea);
 
-    // Use html2canvas to rasterize the label into a full-bleed image.
-    // This way the printer driver sees an IMAGE filling 100% of the page,
-    // and cannot apply hardware margins to the content inside.
-    if (window.html2canvas) {
-      const labelPage = printArea.querySelector('.label-page');
+    // Direct DOM printing without canvas rasterization.
+    // This preserves razor-sharp text (vector quality) for thermal printers 
+    // and prevents mobile Safari from messing up image scaling/pagination.
+    setTimeout(() => {
+      window.print();
       
-      // Ensure SVG barcodes are fully rendered before canvas
+      // Cleanup after print dialog
       setTimeout(() => {
-        html2canvas(labelPage, {
-          scale: 4,           // 4x scale = ~400dpi
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
-          logging: false,
-        }).then(canvas => {
-          const dataUrl = canvas.toDataURL('image/png');
-          // Instead of window.open (which is blocked on mobile), 
-          // we replace the contents of our print container with the image.
-          // Then we apply our 'print-area' ID so our print CSS hides everything else.
-          printArea.innerHTML = `<img src="${dataUrl}" style="width:100%; height:100%; display:block; object-fit:cover;">`;
-          printArea.id = 'print-area';
-          
-          // Trigger print dialog
-          setTimeout(() => {
-            window.print();
-          }, 100);
-        });
-      }, 100); // slight delay for DOM rendering
-    } else {
-      // Fallback: direct window.print()
-      printArea.id = 'print-area';
-      setTimeout(() => window.print(), 100);
-    }
+        if (document.body.contains(printArea)) {
+          document.body.removeChild(printArea);
+        }
+      }, 1000);
+    }, 150);
 
     // Cleanup print area after generous delay
     setTimeout(() => {
