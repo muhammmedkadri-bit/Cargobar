@@ -89,23 +89,44 @@ const State = {
 const Store = {
   async load() {
     // 1. Local counters and prefs
-    const rawPrefs = localStorage.getItem('cb_prefs');
-    if (rawPrefs) {
-      State.prefs = { ...State.prefs, ...JSON.parse(rawPrefs) };
-      if (!State.prefs.counters) State.prefs.counters = { [State.prefs.defaultPrefix]: 1 };
-    } else {
-      // Migrate old tkg_counter if exists
-      const oldTkg = localStorage.getItem('cb_tkg_counter');
-      if (oldTkg) State.prefs.counters['TKG'] = parseInt(oldTkg, 10);
+    try {
+      const rawPrefs = localStorage.getItem('cb_prefs');
+      if (rawPrefs) {
+        State.prefs = { ...State.prefs, ...JSON.parse(rawPrefs) };
+        if (!State.prefs.counters) State.prefs.counters = { [State.prefs.defaultPrefix]: 1 };
+      } else {
+        // Migrate old tkg_counter if exists
+        const oldTkg = localStorage.getItem('cb_tkg_counter');
+        if (oldTkg) State.prefs.counters['TKG'] = parseInt(oldTkg, 10);
+      }
+    } catch (e) {
+      console.error('cb_prefs parsing failed:', e);
+      localStorage.removeItem('cb_prefs'); // Clear corrupted preferences
     }
     
-    State.print_count = parseInt(localStorage.getItem('cb_print_count') || '0', 10);
+    try {
+      State.print_count = parseInt(localStorage.getItem('cb_print_count') || '0', 10);
+    } catch(e) {
+      State.print_count = 0;
+    }
 
     // 2. Optimistic Load (Offline Mode / Fallback)
-    const rawCust = localStorage.getItem('cb_customers');
-    State.customers = rawCust ? JSON.parse(rawCust) : [...window.MOCK_CUSTOMERS];
-    const rawComp = localStorage.getItem('cb_company');
-    if (rawComp) State.company = { ...State.company, ...JSON.parse(rawComp) };
+    try {
+      const rawCust = localStorage.getItem('cb_customers');
+      State.customers = rawCust ? JSON.parse(rawCust) : [...window.MOCK_CUSTOMERS];
+    } catch (e) {
+      console.error('cb_customers parsing failed:', e);
+      State.customers = [...window.MOCK_CUSTOMERS];
+      localStorage.removeItem('cb_customers');
+    }
+
+    try {
+      const rawComp = localStorage.getItem('cb_company');
+      if (rawComp) State.company = { ...State.company, ...JSON.parse(rawComp) };
+    } catch (e) {
+      console.error('cb_company parsing failed:', e);
+      localStorage.removeItem('cb_company');
+    }
 
     if (!_db || !State.session) {
       return; // Offline mode or not logged in, we use local data.
@@ -590,40 +611,14 @@ const Slip = {
   },
 
   executePrint(data) {
-            <svg viewBox="0 0 100 100" style="width:10mm; height:10mm;">
-              <rect x="5" y="5" width="90" height="90" rx="12" fill="none" stroke="#000" stroke-width="4"/>
-              <path d="M 28 25 C 28 45 35 55 50 55 C 65 55 72 45 72 25 Z" fill="#000"/>
-              <rect x="46" y="55" width="8" height="20" fill="#000"/>
-              <path d="M 35 75 L 65 75 L 65 82 L 35 82 Z" fill="#000"/>
-              <polygon points="56,23 44,38 54,38 42,50 48,50 60,34 50,34" fill="#fff"/>
-            </svg>
-            <!-- Keep Dry -->
-            <svg viewBox="0 0 100 100" style="width:10mm; height:10mm;">
-              <rect x="5" y="5" width="90" height="90" rx="12" fill="none" stroke="#000" stroke-width="4"/>
-              <path d="M 15 52 C 15 10 85 10 85 52 Q 76.25 45 67.5 52 Q 58.75 45 50 52 Q 41.25 45 32.5 52 Q 23.75 45 15 52 Z" fill="#000"/>
-              <path d="M 50 47 L 50 72 C 50 78 58 78 58 72" fill="none" stroke="#000" stroke-width="4" stroke-linecap="round"/>
-              <path d="M 38 12 Q 35 18 38 22 Q 41 18 38 12 Z" fill="#000"/>
-              <path d="M 48 20 Q 45 26 48 30 Q 51 26 48 20 Z" fill="#000"/>
-              <path d="M 60 14 Q 57 20 60 24 Q 63 20 60 14 Z" fill="#000"/>
-            </svg>
-          </div>
-        </div>
-
-      </div>
-    `;
-    return page;
-
-  },
-
-  esc(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  },
+    // Etiket yazdırma motoru silindi. Yeni motor bekleniyor...
+  }
 };
+
+/* ────────────────────────────────────────
+   LABEL BUILDER — (Silindi, yeni motor bekleniyor)
+──────────────────────────────────────── */
+const LabelBuilder = {};
 
 /* ────────────────────────────────────────
    APP — Customers & Modals
