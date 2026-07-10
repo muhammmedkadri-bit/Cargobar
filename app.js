@@ -657,25 +657,16 @@ const Slip = {
           logging: false,
         }).then(canvas => {
           const dataUrl = canvas.toDataURL('image/png');
+          // Instead of window.open (which is blocked on mobile), 
+          // we replace the contents of our print container with the image.
+          // Then we apply our 'print-area' ID so our print CSS hides everything else.
+          printArea.innerHTML = `<img src="${dataUrl}" style="width:100%; height:100%; display:block; object-fit:cover;">`;
+          printArea.id = 'print-area';
           
-          // Open a minimal print page that is just the image filling 100% of the page
-          const printWin = window.open('', '_blank', 'width=800,height=800');
-          if (!printWin) {
-            // Popup blocked — fallback to normal print (will use the old CSS method)
-            printArea.id = 'print-area'; // apply print CSS rules
+          // Trigger print dialog
+          setTimeout(() => {
             window.print();
-            return;
-          }
-          printWin.document.write(`<!DOCTYPE html><html><head>
-            <style>
-              @page { size: 100mm 100mm; margin: 0; }
-              html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #fff; overflow: hidden; }
-              img { width: 100%; height: 100%; display: block; object-fit: cover; }
-            </style>
-          </head><body onload="setTimeout(function(){ window.print(); window.close(); }, 500)">
-            <img src="${dataUrl}">
-          </body></html>`);
-          printWin.document.close();
+          }, 100);
         });
       }, 100); // slight delay for DOM rendering
     } else {
