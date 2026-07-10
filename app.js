@@ -384,7 +384,10 @@ const Router = {
 
     if (viewKey === '#/customers') App.renderCustomersTable();
     if (viewKey === '#/company') App.renderCompanyForm();
-    if (viewKey === '#/settings') Settings.renderPrefixList();
+    if (viewKey === '#/settings') {
+      Settings.renderPrefixList();
+      Settings.renderCustomTemplate();
+    }
 
     // Sync dock visibility and selection
     if (window.Dock) Dock.syncUI(hash);
@@ -698,6 +701,15 @@ const LabelBuilder = {
   buildLabel(c, desi, tkg) {
     const page = document.createElement('div');
     page.className = 'label-page';
+    
+    // Apply custom template if exists
+    if (State.prefs && State.prefs.customTemplate) {
+      page.classList.add('has-custom-bg');
+      page.style.backgroundImage = `url(${State.prefs.customTemplate})`;
+      page.style.backgroundSize = '100% 100%';
+      page.style.backgroundRepeat = 'no-repeat';
+      page.style.backgroundPosition = 'center';
+    }
 
     // Desi/Weight display
     const desiVal  = desi.ucret !== null ? desi.ucret : '—';
@@ -1787,6 +1799,55 @@ const Settings = {
       c.classList.toggle('active', c.getAttribute('onclick')?.includes(`'${tpl}'`));
     });
     Toast.show('Şablon güncellendi.', 'success');
+  },
+
+  handleCustomTemplateUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.match('image.*')) {
+      Toast.show('Sadece resim (PNG/JPG) yükleyebilirsiniz.', 'error');
+      return;
+    }
+
+    // Convert file to base64 and store in State
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64Img = e.target.result;
+      State.prefs.customTemplate = base64Img;
+      Store.savePrefs();
+      Settings.renderCustomTemplate();
+      Toast.show('Özel şablon başarıyla yüklendi.', 'success');
+    };
+    reader.readAsDataURL(file);
+    event.target.value = ''; // reset input
+  },
+
+  clearCustomTemplate() {
+    if (confirm('Özel şablonu kaldırmak istediğinize emin misiniz?')) {
+      State.prefs.customTemplate = null;
+      Store.savePrefs();
+      Settings.renderCustomTemplate();
+      Toast.show('Şablon kaldırıldı.', 'success');
+    }
+  },
+
+  renderCustomTemplate() {
+    const imgElement = document.getElementById('custom-template-img');
+    const container = document.getElementById('custom-template-preview-container');
+    const clearBtn = document.getElementById('clear-template-btn');
+
+    if (!imgElement || !container || !clearBtn) return;
+
+    if (State.prefs.customTemplate) {
+      imgElement.src = State.prefs.customTemplate;
+      container.style.display = 'block';
+      clearBtn.style.display = 'inline-block';
+    } else {
+      imgElement.src = '';
+      container.style.display = 'none';
+      clearBtn.style.display = 'none';
+    }
   },
 
   checkResetInput() {

@@ -641,7 +641,29 @@
                 <div class="template-preview">
                    <div class="template-overlay">Çok Yakında</div>
                 </div>
-                <div class="template-name">Minimal Şablon</div>
+                <div class="template-name">Kompakt Şablon</div>
+              </div>
+            </div> <!-- End of template-grid -->
+
+            <!-- Custom Template Upload Section -->
+            <div style="margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                <h3 style="margin-bottom: 0.5rem; font-weight: 600;">Özel Şablon Yükle (100x100mm)</h3>
+                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+                  Kendi etiket arka planınızı (PNG/JPG) yükleyebilirsiniz. Yüklediğiniz şablon etiketlerinizin arka planı olarak kullanılacak ve standart çerçeveler kaldırılacaktır.
+                </p>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                  <input type="file" id="custom-template-input" accept="image/png, image/jpeg, image/jpg" style="display: none;" onchange="Settings.handleCustomTemplateUpload(event)">
+                  <button class="btn btn-secondary" onclick="document.getElementById('custom-template-input').click()">
+                    <i class="fas fa-upload"></i> Resim Seç
+                  </button>
+                  <button id="clear-template-btn" class="btn btn-danger" style="display: none;" onclick="Settings.clearCustomTemplate()">
+                    <i class="fas fa-trash"></i> Şablonu Kaldır
+                  </button>
+                </div>
+                <div id="custom-template-preview-container" style="margin-top: 1rem; display: none;">
+                  <p style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;">Yüklü Şablon:</p>
+                  <img id="custom-template-img" src="" style="width: 100px; height: 100px; object-fit: contain; border: 1px solid var(--border); border-radius: 4px;">
+                </div>
               </div>
 
               <!-- Şablon 4 (Yakında) -->

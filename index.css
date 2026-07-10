@@ -807,6 +807,22 @@ input[type="number"] { -moz-appearance: textfield; }
   line-height: 1.4;
 }
 
+/* Custom Background Overrides */
+.label-page.has-custom-bg .label-inner {
+  border: none !important;
+  background: transparent !important;
+}
+.label-page.has-custom-bg .label-header {
+  border-bottom: none !important;
+}
+.label-page.has-custom-bg .label-cargo-row {
+  border-top: none !important;
+  border-bottom: none !important;
+}
+.label-page.has-custom-bg .label-cargo-sep {
+  display: none !important;
+}
+
 /* ═══════════════════════════════════════
    PRINT MEDIA QUERY
 ═══════════════════════════════════════ */
@@ -845,10 +861,18 @@ input[type="number"] { -moz-appearance: textfield; }
     inset: 0 !important;
     width: 100% !important;
     height: 100% !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
     z-index: 999999 !important;
+  }
+  
+  #print-area img {
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    page-break-inside: avoid !important;
   }
 
   /* Label page fills 100% of available print area */
