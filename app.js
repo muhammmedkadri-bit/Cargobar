@@ -653,12 +653,12 @@ const Slip = {
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
           <style>
-            @page { size: 100mm 100mm; margin: 0; }
-            body { margin: 0; padding: 0; background: #fff; }
+            @page { size: 100mm 100mm; margin: 0 !important; }
+            html, body { margin: 0 !important; padding: 0 !important; background: #fff; }
           </style>
         </head>
         <body>
-          <div id="print-area" style="display: block !important; position: static !important; width: 100%;">
+          <div id="print-area">
             ${area.innerHTML}
           </div>
           <script>
