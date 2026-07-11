@@ -234,7 +234,7 @@ async function buildLabel(data, customTemplateBase64, copies) {
     .text(`${alici?.ilce || ''} / ${alici?.il || ''}`, { x: mm(4), y: mm(68), size: 1 })
 
     // Dikey Barkod Bölümü (Sağ Sütun)
-    .image(barcode, { x: mm(87), y: mm(20), width: 80, height: 320, rotation: 90 })
+    .image(barcode, { x: mm(87), y: mm(20), width: 80, height: 320 }) // rotation: 90 geçici kaldırıldı
     .text(tkgCode || '', { x: mm(97), y: mm(45), size: 1, rotation: 90 })
 
     .line({ x1: mm(0), y1: mm(78), x2: mm(100), y2: mm(78), thickness: 2 })
