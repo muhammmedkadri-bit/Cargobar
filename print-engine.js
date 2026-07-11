@@ -276,7 +276,7 @@ async function buildLabel(data, customTemplateBase64, copies) {
     width: verticalBarcodeBitmap.width,
     height: verticalBarcodeBitmap.height,
     bytesPerRow: verticalBarcodeBitmap.bytesPerRow,
-    'NOT: 90° döndürme sonrası canvas boyutları değişiyor — width=80, height=320 beklenir'
+    note: 'NOT: 90 derece dondurme sonrasi canvas boyutlari degisiyor — width=80, height=320 beklenir'
   });
 
   let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies })

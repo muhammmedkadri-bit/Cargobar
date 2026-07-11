@@ -61,6 +61,14 @@ const config = loadConfig();
 const app = express();
 app.use(express.json({ limit: '5mb' }));
 
+// Chrome Private Network Access (PNA) politikası için gerekli header.
+// Tarayıcı, public bir siteden (https://...) localhost'a istek atarken
+// preflight (OPTIONS) isteğinde bu header cors'tan ÖNCE set edilmeli.
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Private-Network', 'true');
+  next();
+});
+
 // --- Güvenlik: sadece izinli origin'lerden ve doğru token ile istek kabul et ---
 app.use(cors({
   origin: (origin, cb) => {
