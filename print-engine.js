@@ -293,6 +293,34 @@ async function buildLabel(data, customTemplateBase64, copies) {
   return { lbl, images };
 }
 
+// TSPL metinlerini UTF-8 yerine Windows-1254 (Türkçe) byte dizisine çeviren fonksiyon.
+// Zjiang gibi yazıcılar UTF-8'i doğrudan desteklemeyebilir, bu nedenle CP1254 zorunludur.
+function encodeCP1254(str) {
+  const buf = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    switch(code) {
+      case 0x011E: buf[i] = 208; break; // Ğ
+      case 0x011F: buf[i] = 240; break; // ğ
+      case 0x0130: buf[i] = 221; break; // İ
+      case 0x0131: buf[i] = 253; break; // ı
+      case 0x015E: buf[i] = 222; break; // Ş
+      case 0x015F: buf[i] = 254; break; // ş
+      case 0x00C7: buf[i] = 199; break; // Ç
+      case 0x00E7: buf[i] = 231; break; // ç
+      case 0x00D6: buf[i] = 214; break; // Ö
+      case 0x00F6: buf[i] = 246; break; // ö
+      case 0x00DC: buf[i] = 220; break; // Ü
+      case 0x00FC: buf[i] = 252; break; // ü
+      default:
+        // Eğer karakter ISO-8859-9 (Latin-5) aralığındaysa olduğu gibi bırak (ASCII vs.)
+        // Bilinmeyen karakterse '?' (63) bas.
+        buf[i] = code < 256 ? code : 63; 
+    }
+  }
+  return buf;
+}
+
 // Resimleri TSPL'e binary olarak yerleştirmek için özel derleyici
 function compileToTSPLBase64(lbl, images, copies) {
   const tsplStr = tsc.compile(lbl);
@@ -314,19 +342,22 @@ function compileToTSPLBase64(lbl, images, copies) {
     beforePrint = lines.slice(0, printIndex).join('\r\n') + '\r\n';
   }
   
-  const enc = new TextEncoder();
-  const buffers = [enc.encode(beforePrint)];
+  // En başa CODEPAGE 1254 komutunu ekliyoruz
+  beforePrint = "CODEPAGE 1254\r\n" + beforePrint;
+  
+  // Artık TextEncoder (UTF-8) YERİNE encodeCP1254 kullanıyoruz.
+  const buffers = [encodeCP1254(beforePrint)];
   
   for (const img of images) {
     // BITMAP x, y, width_bytes, height, mode
     const header = `BITMAP ${img.x},${img.y},${img.bitmap.bytesPerRow},${img.bitmap.height},0,`;
-    buffers.push(enc.encode(header));
+    buffers.push(encodeCP1254(header));
     buffers.push(img.bitmap.data); // HAM BINARY DATA
-    buffers.push(enc.encode('\r\n'));
+    buffers.push(encodeCP1254('\r\n'));
   }
   
   if (printIndex !== -1) {
-    buffers.push(enc.encode(printCmd));
+    buffers.push(encodeCP1254(printCmd));
   }
   
   const totalLen = buffers.reduce((s, b) => s + b.length, 0);
@@ -349,6 +380,8 @@ function compileToTSPLBase64(lbl, images, copies) {
 // DIŞA AÇILAN ANA FONKSİYON
 // ─────────────────────────────────────────────────────────
 async function printShippingLabel(data, copies = 1) {
+  console.log('YAZDIRILAN VERİ:', JSON.stringify(data, null, 2));
+
   const healthy = await checkAgentHealth();
   if (!healthy) {
     throw new Error(
