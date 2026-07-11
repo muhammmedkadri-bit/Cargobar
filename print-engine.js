@@ -199,17 +199,116 @@ function wrapText(text, maxChars) {
 }
 
 // ─────────────────────────────────────────────────────────
+// METİN TO MONOCHROME BITMAP DÖNÜŞTÜRÜCÜ
+// ─────────────────────────────────────────────────────────
+async function renderTextToMonochromeBitmap(text, options = {}) {
+  const { 
+    fontSize = 20, 
+    fontWeight = 'normal', 
+    maxWidthDots = 800, 
+    reverse = false, 
+    rotation = 0,
+    align = 'left' 
+  } = options;
+
+  const inputLines = (text || '').split('\n');
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = `${fontWeight} ${fontSize}px sans-serif`;
+  
+  const lines = [];
+  for (const pLine of inputLines) {
+    let currentLine = '';
+    const words = pLine.split(' ');
+    for (const word of words) {
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidthDots && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+  }
+  
+  const lineHeight = Math.round(fontSize * 1.2);
+  const totalHeight = Math.max(lineHeight * lines.length, lineHeight);
+  
+  let actualMaxWidth = 0;
+  for (const l of lines) {
+    const w = ctx.measureText(l).width;
+    if (w > actualMaxWidth) actualMaxWidth = w;
+  }
+  
+  const paddingX = reverse ? 16 : 0;
+  const paddingY = reverse ? 8 : 0;
+  
+  canvas.width = Math.max(8, Math.ceil(actualMaxWidth + paddingX));
+  canvas.height = Math.max(8, Math.ceil(totalHeight + paddingY));
+  
+  ctx.font = `${fontWeight} ${fontSize}px sans-serif`;
+  ctx.textBaseline = 'top';
+  
+  ctx.fillStyle = reverse ? 'black' : 'white';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  ctx.fillStyle = reverse ? 'white' : 'black';
+  const startX = reverse ? paddingX/2 : 0;
+  const startY = reverse ? paddingY/2 : 0;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    let xPos = startX;
+    if (align === 'center') {
+      const w = ctx.measureText(line).width;
+      xPos = (canvas.width - w) / 2;
+    }
+    ctx.fillText(line, xPos, startY + (i * lineHeight));
+  }
+  
+  let finalCanvas = canvas;
+  if (rotation === 90 || rotation === 270) {
+    finalCanvas = document.createElement('canvas');
+    finalCanvas.width = canvas.height;
+    finalCanvas.height = canvas.width;
+    const fctx = finalCanvas.getContext('2d');
+    fctx.fillStyle = 'white';
+    fctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+    fctx.save();
+    if (rotation === 90) {
+      fctx.translate(finalCanvas.width, 0);
+      fctx.rotate(Math.PI / 2);
+    } else {
+      fctx.translate(0, finalCanvas.height);
+      fctx.rotate(-Math.PI / 2);
+    }
+    fctx.drawImage(canvas, 0, 0);
+    fctx.restore();
+  }
+  
+  return imageToMonochromeBitmap(finalCanvas, finalCanvas.width, finalCanvas.height);
+}
+
+// ─────────────────────────────────────────────────────────
 // ETİKET TASARIMI (100x100mm)
 // ─────────────────────────────────────────────────────────
 async function buildLabel(data, customTemplateBase64, copies) {
   const { tkgCode, alici, gonderici, desi } = data;
   let images = [];
 
+  async function addTextBitmap(text, x, y, options, centerPointX = null) {
+    if (!text) return;
+    const bitmap = await renderTextToMonochromeBitmap(text, options);
+    const finalX = centerPointX !== null ? Math.round(centerPointX - bitmap.width / 2) : x;
+    images.push({ bitmap, x: finalX, y });
+  }
+
   // 1. ÖZEL ŞABLON AKTİF İSE (Python Absolute Koordinatları)
   if (customTemplateBase64) {
     try {
       const img = await loadImg(customTemplateBase64);
-      // 100x100mm etiket için 203 DPI = 800x800 dot çözünürlük
       const bgBitmap = imageToMonochromeBitmap(img, 800, 800);
       images.push({ bitmap: bgBitmap, x: 0, y: 0 });
 
@@ -217,7 +316,6 @@ async function buildLabel(data, customTemplateBase64, copies) {
       const horizontalBarcodeBitmap = await pngBytesToMonochromeBitmap(horizontalBarcodeBytes, 320, 80, 0);
       images.push({ bitmap: horizontalBarcodeBitmap, x: mm(30), y: mm(84) });
 
-      // Türkçe i/İ düzeltmeli Büyük Harf
       const toTrUpper = (str) => (str || '').replace(/i/g, 'İ').toUpperCase();
 
       const receiverTitle = toTrUpper(alici?.unvan);
@@ -225,21 +323,19 @@ async function buildLabel(data, customTemplateBase64, copies) {
       const receiverTel = toTrUpper(alici?.tel);
       const desiStr = `DESİ: ${desi?.desi || '0'} DS.`;
 
-      let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies })
-        // Alıcı Bilgileri
-        .text(receiverTitle, { x: mm(0.22), y: mm(45.34), font: '1', size: 1 })
-        .text(receiverAddr, { x: mm(0.22), y: mm(53.00), font: '1', size: 1 })
-        .text(receiverTel, { x: mm(0.22), y: mm(78.00), font: '1', size: 1 })
+      let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies });
+      
+      await addTextBitmap(receiverTitle, mm(0.22), mm(45.34), { fontSize: 20, fontWeight: 'bold' });
+      await addTextBitmap(receiverAddr, mm(0.22), mm(53.00), { fontSize: 20, maxWidthDots: 600 });
+      await addTextBitmap(receiverTel, mm(0.22), mm(78.00), { fontSize: 20 });
 
-        // Desi Bilgileri
-        .text(`EN : ${desi?.en || '0'}`, { x: mm(51.76), y: mm(56.59), font: '1', size: 1 })
-        .text(`BOY : ${desi?.boy || '0'}`, { x: mm(51.76), y: mm(61.00), font: '1', size: 1 })
-        .text(`YUKSEKLIK : ${desi?.yukseklik || '0'}`, { x: mm(51.76), y: mm(65.50), font: '1', size: 1 })
-        .text(`KILO : ${desi?.kg || '0'}`, { x: mm(51.76), y: mm(70.00), font: '1', size: 1 })
-        .text(desiStr, { x: mm(51.76), y: mm(76.00), font: '1', size: 1 })
+      await addTextBitmap(`EN : ${desi?.en || '0'}`, mm(51.76), mm(56.59), { fontSize: 20 });
+      await addTextBitmap(`BOY : ${desi?.boy || '0'}`, mm(51.76), mm(61.00), { fontSize: 20 });
+      await addTextBitmap(`YUKSEKLIK : ${desi?.yukseklik || '0'}`, mm(51.76), mm(65.50), { fontSize: 20 });
+      await addTextBitmap(`KILO : ${desi?.kg || '0'}`, mm(51.76), mm(70.00), { fontSize: 20 });
+      await addTextBitmap(desiStr, mm(51.76), mm(76.00), { fontSize: 20 });
 
-        // Barkod (Metin kısmı)
-        .text(tkgCode || '', { x: mm(50), y: mm(95), font: '1', size: 1, align: 'center' });
+      await addTextBitmap(tkgCode || '', null, mm(95), { fontSize: 20, align: 'center' }, mm(50));
 
       return { lbl, images };
     } catch (e) {
@@ -257,68 +353,32 @@ async function buildLabel(data, customTemplateBase64, copies) {
   images.push({ bitmap: verticalBarcodeBitmap, x: mm(87), y: mm(20) });
 
   let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies })
-    // Dış Çerçeve
     .box({ x: 0, y: 0, width: 800, height: 800, thickness: 4 })
-    
-    // Header Bölümü
-    .text(gonderici?.unvan || 'ŞİRKET ÜNVANI', { x: mm(5), y: mm(4), size: 2 })
-    .text(gonderici?.slogan || '', { x: mm(5), y: mm(10), size: 1 })
     .line({ x1: mm(0), y1: mm(16), x2: mm(100), y2: mm(16), thickness: 2 })
-
-    // Orta Panel Bölücü Çizgi (Dikey)
     .line({ x1: mm(85), y1: mm(16), x2: mm(85), y2: mm(78), thickness: 2 })
-
-    // GÖNDERİCİ
-    .text('GÖNDERİCİ', { x: mm(4), y: mm(18), size: 1, reverse: true })
-    .text(gonderici?.unvan || '', { x: mm(4), y: mm(22), size: 1 })
-    .text(wrapText(gonderici?.adres || '', 36), { x: mm(4), y: mm(26), size: 1 })
-    
     .line({ x1: mm(0), y1: mm(45), x2: mm(85), y2: mm(45), thickness: 2 })
+    .line({ x1: mm(0), y1: mm(78), x2: mm(100), y2: mm(78), thickness: 2 });
 
-    // ALICI
-    .text('ALICI', { x: mm(4), y: mm(47), size: 1, reverse: true })
-    .text(alici?.unvan || '', { x: mm(4), y: mm(51), size: 1 })
-    .text(wrapText(alici?.adres || '', 36), { x: mm(4), y: mm(55), size: 1 })
-    .text(`${alici?.ilce || ''} / ${alici?.il || ''}`, { x: mm(4), y: mm(68), size: 1 })
+  await addTextBitmap(gonderici?.unvan || 'ŞİRKET ÜNVANI', mm(5), mm(4), { fontSize: 32, fontWeight: 'bold' });
+  await addTextBitmap(gonderici?.slogan || '', mm(5), mm(10), { fontSize: 20 });
 
-    // Dikey Barkod Bölümü Metni
-    .text(tkgCode || '', { x: mm(97), y: mm(45), size: 1, rotation: 90 })
+  await addTextBitmap('GÖNDERİCİ', mm(4), mm(18), { fontSize: 20, reverse: true });
+  await addTextBitmap(gonderici?.unvan || '', mm(4), mm(22), { fontSize: 24, fontWeight: 'bold' });
+  await addTextBitmap(gonderici?.adres || '', mm(4), mm(26), { fontSize: 20, maxWidthDots: mm(80) });
 
-    .line({ x1: mm(0), y1: mm(78), x2: mm(100), y2: mm(78), thickness: 2 })
+  await addTextBitmap('ALICI', mm(4), mm(47), { fontSize: 20, reverse: true });
+  await addTextBitmap(alici?.unvan || '', mm(4), mm(51), { fontSize: 24, fontWeight: 'bold' });
+  await addTextBitmap(alici?.adres || '', mm(4), mm(55), { fontSize: 20, maxWidthDots: mm(80) });
+  await addTextBitmap(`${alici?.ilce || ''} / ${alici?.il || ''}`, mm(4), mm(70), { fontSize: 22, fontWeight: 'bold' });
 
-    // Kargo Desi/Kilo Tablosu
-    .text(`${desiVal} ${desiUnit}`, { x: mm(5), y: mm(81), size: 2 })
-    .text(`${kiloVal} AGIRLIK`, { x: mm(35), y: mm(81), size: 2 });
+  // Dikey Barkod Bölümü Metni
+  await addTextBitmap(tkgCode || '', mm(92), mm(45), { fontSize: 20, rotation: 90 });
+
+  // Kargo Desi/Kilo Tablosu
+  await addTextBitmap(`${desiVal} ${desiUnit}`, mm(5), mm(81), { fontSize: 36, fontWeight: 'bold' });
+  await addTextBitmap(`${kiloVal} AGIRLIK`, mm(35), mm(81), { fontSize: 36, fontWeight: 'bold' });
 
   return { lbl, images };
-}
-
-// TSPL metinlerini UTF-8 yerine Windows-1254 (Türkçe) byte dizisine çeviren fonksiyon.
-// Zjiang gibi yazıcılar UTF-8'i doğrudan desteklemeyebilir, bu nedenle CP1254 zorunludur.
-function encodeCP1254(str) {
-  const buf = new Uint8Array(str.length);
-  for (let i = 0; i < str.length; i++) {
-    const code = str.charCodeAt(i);
-    switch(code) {
-      case 0x011E: buf[i] = 208; break; // Ğ
-      case 0x011F: buf[i] = 240; break; // ğ
-      case 0x0130: buf[i] = 221; break; // İ
-      case 0x0131: buf[i] = 253; break; // ı
-      case 0x015E: buf[i] = 222; break; // Ş
-      case 0x015F: buf[i] = 254; break; // ş
-      case 0x00C7: buf[i] = 199; break; // Ç
-      case 0x00E7: buf[i] = 231; break; // ç
-      case 0x00D6: buf[i] = 214; break; // Ö
-      case 0x00F6: buf[i] = 246; break; // ö
-      case 0x00DC: buf[i] = 220; break; // Ü
-      case 0x00FC: buf[i] = 252; break; // ü
-      default:
-        // Eğer karakter ISO-8859-9 (Latin-5) aralığındaysa olduğu gibi bırak (ASCII vs.)
-        // Bilinmeyen karakterse '?' (63) bas.
-        buf[i] = code < 256 ? code : 63; 
-    }
-  }
-  return buf;
 }
 
 // Resimleri TSPL'e binary olarak yerleştirmek için özel derleyici
@@ -326,7 +386,6 @@ function compileToTSPLBase64(lbl, images, copies) {
   const tsplStr = tsc.compile(lbl);
   const lines = tsplStr.split(/\r?\n/);
   
-  // PRINT komutunu bul ve ayır (resimleri PRINT'ten hemen önce ekleyeceğiz)
   let printCmd = `PRINT ${copies},1\r\n`;
   let printIndex = -1;
   for (let i = lines.length - 1; i >= 0; i--) {
@@ -342,22 +401,20 @@ function compileToTSPLBase64(lbl, images, copies) {
     beforePrint = lines.slice(0, printIndex).join('\r\n') + '\r\n';
   }
   
-  // En başa CODEPAGE 1254 komutunu ekliyoruz
-  beforePrint = "CODEPAGE 1254\r\n" + beforePrint;
-  
-  // Artık TextEncoder (UTF-8) YERİNE encodeCP1254 kullanıyoruz.
-  const buffers = [encodeCP1254(beforePrint)];
+  // Artık metinleri TSPL text komutuyla DEĞİL, resim olarak bastığımız için
+  // özel codepage (1254) ya da özel encoder'a gerek kalmadı. Standart UTF-8 kullanabiliriz.
+  const enc = new TextEncoder();
+  const buffers = [enc.encode(beforePrint)];
   
   for (const img of images) {
-    // BITMAP x, y, width_bytes, height, mode
     const header = `BITMAP ${img.x},${img.y},${img.bitmap.bytesPerRow},${img.bitmap.height},0,`;
-    buffers.push(encodeCP1254(header));
+    buffers.push(enc.encode(header));
     buffers.push(img.bitmap.data); // HAM BINARY DATA
-    buffers.push(encodeCP1254('\r\n'));
+    buffers.push(enc.encode('\r\n'));
   }
   
   if (printIndex !== -1) {
-    buffers.push(encodeCP1254(printCmd));
+    buffers.push(enc.encode(printCmd));
   }
   
   const totalLen = buffers.reduce((s, b) => s + b.length, 0);
@@ -368,7 +425,6 @@ function compileToTSPLBase64(lbl, images, copies) {
     offset += b.length;
   }
   
-  // Uint8Array'i Base64'e dönüştür
   let binary = '';
   for (let i = 0; i < finalBuf.length; i++) {
     binary += String.fromCharCode(finalBuf[i]);
