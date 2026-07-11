@@ -42,7 +42,7 @@ const Settings = {
 const mm = (v) => Math.round(v * 203 / 25.4);
 
 // ─────────────────────────────────────────────────────────
-// GÖRSEL TO MONOCHROME BITMAP DÖNÜŞTÜRÜCÜ
+// GÖRSEL TO MONOCHROME BITMAP DÜNÜŞTÜRÜCÜ
 // ─────────────────────────────────────────────────────────
 async function loadImg(src) {
   return new Promise((resolve, reject) => {
@@ -75,7 +75,11 @@ function imageToMonochromeBitmap(imgElement, targetWidth, targetHeight) {
       const g = data[idx+1];
       const b = data[idx+2];
       const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-      if (gray < 128) {
+      
+      // Zjiang firmware'i görünüşe göre Mode 0 için standart TSPL (1=Siyah, 0=Beyaz) 
+      // mantığını TERS anlıyor (0=Siyah, 1=Beyaz). 
+      // Beyaz (arka plan) pikseller için bit=1 gönderiyoruz.
+      if (gray >= 128) {
         const byteIdx = y * bytesPerRow + Math.floor(x / 8);
         const bitIdx = 7 - (x % 8);
         buffer[byteIdx] |= (1 << bitIdx);
@@ -88,15 +92,6 @@ function imageToMonochromeBitmap(imgElement, targetWidth, targetHeight) {
     height: targetHeight,
     bytesPerRow: bytesPerRow
   };
-  console.log('[DEBUG] imageToMonochromeBitmap çıktısı:', {
-    'data.length': result.data.length,
-    'data constructor': result.data.constructor.name,
-    width: result.width,
-    height: result.height,
-    bytesPerRow: result.bytesPerRow,
-    'beklenen data.length': result.bytesPerRow * result.height,
-    'eşleşiyor mu': result.data.length === result.bytesPerRow * result.height
-  });
   return result;
 }
 
