@@ -338,40 +338,50 @@ async function buildLabel(data, customTemplateBase64, copies) {
     }
   }
 
-  // 2. VARSAYILAN ŞABLON (KLASİK ENTRİO KARGO)
+  // 2. VARSAYILAN ŞABLON (ENTERPRISE / MODERN)
   const desiVal = desi?.ucret !== null && desi?.ucret !== undefined ? desi.ucret : '—';
   const kiloVal = desi?.kg ? `${desi.kg} kg` : '—';
   const desiUnit = desi?.kg > 20 && desi?.ucret === desi?.kg ? 'KG' : 'DESİ';
   
-  const verticalBarcodeBytes = barcodePNG(tkgCode || '', { type: 'code128' });
-  const verticalBarcodeBitmap = await pngBytesToMonochromeBitmap(verticalBarcodeBytes, 320, 80, 90);
-  images.push({ bitmap: verticalBarcodeBitmap, x: mm(87), y: mm(20) });
+  // Barkod: Yatay, alt tarafa ortalanmış (Genişlik: 80mm ~640dot, Yükseklik: 15mm ~120dot)
+  const horizontalBarcodeBytes = barcodePNG(tkgCode || '', { type: 'code128', height: 60, barWidth: 3 });
+  const horizontalBarcodeBitmap = await pngBytesToMonochromeBitmap(horizontalBarcodeBytes, mm(80), mm(15), 0);
+  images.push({ bitmap: horizontalBarcodeBitmap, x: mm(10), y: mm(83) });
 
   let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies })
-    .box({ x: 0, y: 0, width: 800, height: 800, thickness: 4 })
-    .line({ x1: mm(0), y1: mm(16), x2: mm(100), y2: mm(16), thickness: 2 })
-    .line({ x1: mm(85), y1: mm(16), x2: mm(85), y2: mm(78), thickness: 2 })
-    .line({ x1: mm(0), y1: mm(45), x2: mm(85), y2: mm(45), thickness: 2 })
-    .line({ x1: mm(0), y1: mm(78), x2: mm(100), y2: mm(78), thickness: 2 });
+    // Dış Çerçeve kalın
+    .box({ x: mm(0), y: mm(0), width: mm(100), height: mm(100), thickness: mm(1) })
+    
+    // --- GÖNDERİCİ (0 - 22mm) ---
+    .box({ x: mm(0), y: mm(0), width: mm(100), height: mm(22), thickness: mm(0.5) }) // Alt sınır çizgisi
+    .line({ x1: mm(0), y1: mm(62), x2: mm(100), y2: mm(62), thickness: mm(0.5) })
+    .line({ x1: mm(33), y1: mm(62), x2: mm(33), y2: mm(76), thickness: mm(0.5) })
+    .line({ x1: mm(66), y1: mm(62), x2: mm(66), y2: mm(76), thickness: mm(0.5) })
+    .line({ x1: mm(0), y1: mm(76), x2: mm(100), y2: mm(76), thickness: mm(0.5) });
 
-  await addTextBitmap(gonderici?.unvan || 'ŞİRKET ÜNVANI', mm(5), mm(4), { fontSize: 32, fontWeight: 'bold' });
-  await addTextBitmap(gonderici?.slogan || '', mm(5), mm(10), { fontSize: 20 });
+  await addTextBitmap(' GÖNDERİCİ / FROM ', mm(2), mm(2), { fontSize: 20, reverse: true });
+  await addTextBitmap((gonderici?.unvan || 'ŞİRKET ÜNVANI').substring(0, 45), mm(2), mm(7), { fontSize: 32, fontWeight: 'bold' });
+  await addTextBitmap(gonderici?.adres || '', mm(2), mm(13), { fontSize: 22, maxWidthDots: mm(96) });
+  
+  // --- ALICI (22 - 62mm) ---
+  await addTextBitmap(' ALICI / TO ', mm(2), mm(24), { fontSize: 20, reverse: true });
+  await addTextBitmap((alici?.unvan || '').substring(0, 32), mm(2), mm(29), { fontSize: 36, fontWeight: 'bold' });
+  await addTextBitmap(alici?.adres || '', mm(2), mm(36), { fontSize: 24, maxWidthDots: mm(96) });
+  await addTextBitmap(`${alici?.ilce || ''} / ${alici?.il || ''}`.toUpperCase(), mm(2), mm(48), { fontSize: 40, fontWeight: 'bold' });
+  await addTextBitmap(`TEL: ${alici?.tel || '—'}`, mm(2), mm(56), { fontSize: 22 });
+  
+  // --- KARGO BİLGİLERİ (62 - 76mm) ---
+  await addTextBitmap('AĞIRLIK', mm(2), mm(64), { fontSize: 20 });
+  await addTextBitmap(`${kiloVal}`, mm(2), mm(69), { fontSize: 32, fontWeight: 'bold' });
+  
+  await addTextBitmap(desiUnit, mm(35), mm(64), { fontSize: 20 });
+  await addTextBitmap(`${desiVal}`, mm(35), mm(69), { fontSize: 32, fontWeight: 'bold' });
+  
+  await addTextBitmap('TARİH', mm(68), mm(64), { fontSize: 20 });
+  await addTextBitmap(new Date().toLocaleDateString('tr-TR'), mm(68), mm(69), { fontSize: 32, fontWeight: 'bold' });
 
-  await addTextBitmap('GÖNDERİCİ', mm(4), mm(18), { fontSize: 20, reverse: true });
-  await addTextBitmap(gonderici?.unvan || '', mm(4), mm(22), { fontSize: 24, fontWeight: 'bold' });
-  await addTextBitmap(gonderici?.adres || '', mm(4), mm(26), { fontSize: 20, maxWidthDots: mm(80) });
-
-  await addTextBitmap('ALICI', mm(4), mm(47), { fontSize: 20, reverse: true });
-  await addTextBitmap(alici?.unvan || '', mm(4), mm(51), { fontSize: 24, fontWeight: 'bold' });
-  await addTextBitmap(alici?.adres || '', mm(4), mm(55), { fontSize: 20, maxWidthDots: mm(80) });
-  await addTextBitmap(`${alici?.ilce || ''} / ${alici?.il || ''}`, mm(4), mm(70), { fontSize: 22, fontWeight: 'bold' });
-
-  // Dikey Barkod Bölümü Metni
-  await addTextBitmap(tkgCode || '', mm(92), mm(45), { fontSize: 20, rotation: 90 });
-
-  // Kargo Desi/Kilo Tablosu
-  await addTextBitmap(`${desiVal} ${desiUnit}`, mm(5), mm(81), { fontSize: 36, fontWeight: 'bold' });
-  await addTextBitmap(`${kiloVal} AGIRLIK`, mm(35), mm(81), { fontSize: 36, fontWeight: 'bold' });
+  // --- BARKOD BÖLÜMÜ (76 - 100mm) ---
+  await addTextBitmap(tkgCode || '', null, mm(78), { fontSize: 26, align: 'center' }, mm(50));
 
   return { lbl, images };
 }
