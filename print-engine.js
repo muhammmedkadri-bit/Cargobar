@@ -203,6 +203,7 @@ function wrapText(text, maxChars) {
 // ─────────────────────────────────────────────────────────
 async function buildLabel(data, customTemplateBase64, copies) {
   const { tkgCode, alici, gonderici, desi } = data;
+  let images = [];
 
   // 1. ÖZEL ŞABLON AKTİF İSE (Python Absolute Koordinatları)
   if (customTemplateBase64) {
@@ -210,25 +211,11 @@ async function buildLabel(data, customTemplateBase64, copies) {
       const img = await loadImg(customTemplateBase64);
       // 100x100mm etiket için 203 DPI = 800x800 dot çözünürlük
       const bgBitmap = imageToMonochromeBitmap(img, 800, 800);
-      console.log('[DEBUG] bgBitmap .image() çağrısına gönderilecek:', {
-        'data.length': bgBitmap.data.length,
-        'data constructor': bgBitmap.data.constructor.name,
-        width: bgBitmap.width,
-        height: bgBitmap.height,
-        bytesPerRow: bgBitmap.bytesPerRow,
-        'beklenen (800x800/8)': 800 * 100
-      });
+      images.push({ bitmap: bgBitmap, x: 0, y: 0 });
 
       const horizontalBarcodeBytes = barcodePNG(tkgCode || '', { type: 'code128', height: 44, barWidth: 2 });
       const horizontalBarcodeBitmap = await pngBytesToMonochromeBitmap(horizontalBarcodeBytes, 320, 80, 0);
-      console.log('[DEBUG] horizontalBarcodeBitmap .image() çağrısına gönderilecek:', {
-        'data.length': horizontalBarcodeBitmap.data.length,
-        'data constructor': horizontalBarcodeBitmap.data.constructor.name,
-        width: horizontalBarcodeBitmap.width,
-        height: horizontalBarcodeBitmap.height,
-        bytesPerRow: horizontalBarcodeBitmap.bytesPerRow,
-        'beklenen (320x80/8)': 40 * 80
-      });
+      images.push({ bitmap: horizontalBarcodeBitmap, x: mm(30), y: mm(84) });
 
       // Türkçe i/İ düzeltmeli Büyük Harf
       const toTrUpper = (str) => (str || '').replace(/i/g, 'İ').toUpperCase();
@@ -239,8 +226,6 @@ async function buildLabel(data, customTemplateBase64, copies) {
       const desiStr = `DESİ: ${desi?.desi || '0'} DS.`;
 
       let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies })
-        .image(bgBitmap, { x: 0, y: 0, width: 800, height: 800 })
-        
         // Alıcı Bilgileri
         .text(receiverTitle, { x: mm(0.22), y: mm(45.34), font: '1', size: 1 })
         .text(receiverAddr, { x: mm(0.22), y: mm(53.00), font: '1', size: 1 })
@@ -253,11 +238,10 @@ async function buildLabel(data, customTemplateBase64, copies) {
         .text(`KILO : ${desi?.kg || '0'}`, { x: mm(51.76), y: mm(70.00), font: '1', size: 1 })
         .text(desiStr, { x: mm(51.76), y: mm(76.00), font: '1', size: 1 })
 
-        // Barkod
-        .image(horizontalBarcodeBitmap, { x: mm(30), y: mm(84), width: 320, height: 80 })
+        // Barkod (Metin kısmı)
         .text(tkgCode || '', { x: mm(50), y: mm(95), font: '1', size: 1, align: 'center' });
 
-      return lbl;
+      return { lbl, images };
     } catch (e) {
       console.error('Özel şablon yüklenirken hata oluştu, varsayılan şablona dönülüyor.', e);
     }
@@ -270,14 +254,7 @@ async function buildLabel(data, customTemplateBase64, copies) {
   
   const verticalBarcodeBytes = barcodePNG(tkgCode || '', { type: 'code128' });
   const verticalBarcodeBitmap = await pngBytesToMonochromeBitmap(verticalBarcodeBytes, 320, 80, 90);
-  console.log('[DEBUG] verticalBarcodeBitmap .image() çağrısına gönderilecek:', {
-    'data.length': verticalBarcodeBitmap.data.length,
-    'data constructor': verticalBarcodeBitmap.data.constructor.name,
-    width: verticalBarcodeBitmap.width,
-    height: verticalBarcodeBitmap.height,
-    bytesPerRow: verticalBarcodeBitmap.bytesPerRow,
-    note: 'NOT: 90 derece dondurme sonrasi canvas boyutlari degisiyor — width=80, height=320 beklenir'
-  });
+  images.push({ bitmap: verticalBarcodeBitmap, x: mm(87), y: mm(20) });
 
   let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies })
     // Dış Çerçeve
@@ -304,8 +281,7 @@ async function buildLabel(data, customTemplateBase64, copies) {
     .text(wrapText(alici?.adres || '', 36), { x: mm(4), y: mm(55), size: 1 })
     .text(`${alici?.ilce || ''} / ${alici?.il || ''}`, { x: mm(4), y: mm(68), size: 1 })
 
-    // Dikey Barkod Bölümü (Sağ Sütun)
-    .image(verticalBarcodeBitmap, { x: mm(87), y: mm(20), width: 80, height: 320 }) // rotation: 90 geçici kaldırıldı
+    // Dikey Barkod Bölümü Metni
     .text(tkgCode || '', { x: mm(97), y: mm(45), size: 1, rotation: 90 })
 
     .line({ x1: mm(0), y1: mm(78), x2: mm(100), y2: mm(78), thickness: 2 })
@@ -314,15 +290,59 @@ async function buildLabel(data, customTemplateBase64, copies) {
     .text(`${desiVal} ${desiUnit}`, { x: mm(5), y: mm(81), size: 2 })
     .text(`${kiloVal} AGIRLIK`, { x: mm(35), y: mm(81), size: 2 });
 
-  return lbl;
+  return { lbl, images };
 }
 
-function compile(lbl) {
-  console.log('[DEBUG] tsc.compile() çağrılıyor...');
-  const result = tsc.compile(lbl);
-  console.log('[DEBUG] tsc.compile() sonucu tip:', typeof result, '| uzunluk:', typeof result === 'string' ? result.length : (result?.length ?? 'N/A'));
-  console.log('[DEBUG] compile çıktısı (ilk 300 karakter):', typeof result === 'string' ? result.substring(0, 300) : JSON.stringify(result)?.substring(0, 300));
-  return result;
+// Resimleri TSPL'e binary olarak yerleştirmek için özel derleyici
+function compileToTSPLBase64(lbl, images, copies) {
+  const tsplStr = tsc.compile(lbl);
+  const lines = tsplStr.split(/\r?\n/);
+  
+  // PRINT komutunu bul ve ayır (resimleri PRINT'ten hemen önce ekleyeceğiz)
+  let printCmd = `PRINT ${copies},1\r\n`;
+  let printIndex = -1;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].startsWith('PRINT ')) {
+      printCmd = lines[i] + '\r\n';
+      printIndex = i;
+      break;
+    }
+  }
+  
+  let beforePrint = tsplStr;
+  if (printIndex !== -1) {
+    beforePrint = lines.slice(0, printIndex).join('\r\n') + '\r\n';
+  }
+  
+  const enc = new TextEncoder();
+  const buffers = [enc.encode(beforePrint)];
+  
+  for (const img of images) {
+    // BITMAP x, y, width_bytes, height, mode
+    const header = `BITMAP ${img.x},${img.y},${img.bitmap.bytesPerRow},${img.bitmap.height},0,`;
+    buffers.push(enc.encode(header));
+    buffers.push(img.bitmap.data); // HAM BINARY DATA
+    buffers.push(enc.encode('\r\n'));
+  }
+  
+  if (printIndex !== -1) {
+    buffers.push(enc.encode(printCmd));
+  }
+  
+  const totalLen = buffers.reduce((s, b) => s + b.length, 0);
+  const finalBuf = new Uint8Array(totalLen);
+  let offset = 0;
+  for (const b of buffers) {
+    finalBuf.set(b, offset);
+    offset += b.length;
+  }
+  
+  // Uint8Array'i Base64'e dönüştür
+  let binary = '';
+  for (let i = 0; i < finalBuf.length; i++) {
+    binary += String.fromCharCode(finalBuf[i]);
+  }
+  return window.btoa(binary);
 }
 
 // ─────────────────────────────────────────────────────────
@@ -337,21 +357,20 @@ async function printShippingLabel(data, copies = 1) {
     );
   }
 
-  // Local storage'dan custom şablonu çek
   const rawPrefs = localStorage.getItem('cb_prefs');
   let customTemplate = null;
   if (rawPrefs) {
-    try {
-      const prefs = JSON.parse(rawPrefs);
-      customTemplate = prefs.customTemplate || null;
-    } catch (e) {
-      console.error('Could not parse prefs for custom template:', e);
-    }
+    try { customTemplate = JSON.parse(rawPrefs).customTemplate || null; } catch {}
   }
-  const lbl = await buildLabel(data, customTemplate, copies);
-  const raw = compile(lbl);
+  
+  const { lbl, images } = await buildLabel(data, customTemplate, copies);
+  const base64Data = compileToTSPLBase64(lbl, images, copies);
 
-  await sendRaw(raw);
+  // Ajanın /print endpoint'ine base64 olarak gönder
+  await agentFetch('/print', {
+    method: 'POST',
+    body: JSON.stringify({ data: base64Data, encoding: 'base64' })
+  });
   return true;
 }
 
@@ -364,7 +383,14 @@ async function previewShippingLabel(data, copies = 1) {
   if (rawPrefs) {
     try { customTemplate = JSON.parse(rawPrefs).customTemplate || null; } catch {}
   }
-  const lbl = await buildLabel(data, customTemplate, copies);
+  
+  const { lbl, images } = await buildLabel(data, customTemplate, copies);
+  
+  // Önizleme (SVG) için resimleri Label nesnesine tekrar ekle
+  for (const img of images) {
+    lbl.image(img.bitmap, { x: img.x, y: img.y, width: img.bitmap.width, height: img.bitmap.height });
+  }
+  
   const code = tsc.compile(lbl);
   const svg = tsc.preview(lbl);
   const validation = tsc.validate(code);
