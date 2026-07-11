@@ -1895,6 +1895,7 @@ input[type="number"] { -moz-appearance: textfield; }
 }
 
 .template-badge {
+  display: none;
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
@@ -1905,6 +1906,9 @@ input[type="number"] { -moz-appearance: textfield; }
   padding: 0.2rem 0.5rem;
   border-radius: 999px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.template-card.active .template-badge {
+  display: block;
 }
 
 .template-overlay {

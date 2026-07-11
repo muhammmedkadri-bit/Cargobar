@@ -10,9 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
-  <!-- [DEBUG] Eruda mobil konsol — testler bittikten sonra kaldır -->
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>eruda.init();</script>
+
 </head>
 <body>
 
@@ -618,21 +616,7 @@
               Kargo etiketleriniz için yazdırma şablonunu seçin.
             </p>
             <div class="template-grid">
-              <!-- Şablon 1 (Aktif) -->
-              <div class="template-card active" onclick="Settings.setTemplate('default')">
-                <div class="template-preview">
-                  <svg viewBox="0 0 100 140" fill="none" style="width: 100%; height: 100%;">
-                    <rect width="100" height="140" rx="4" fill="white" />
-                    <rect x="10" y="10" width="80" height="20" rx="2" fill="#e2e8f0" />
-                    <rect x="10" y="40" width="80" height="60" rx="2" fill="#f1f5f9" />
-                    <rect x="10" y="110" width="80" height="20" rx="2" fill="#e2e8f0" />
-                  </svg>
-                  <div class="template-badge">Aktif</div>
-                </div>
-                <div class="template-name">Klasik Entrio</div>
-              </div>
-
-              <!-- Şablon 2: Özel Şablon -->
+              <!-- Şablon 1: Özel Şablon -->
               <div class="template-card" id="template-card-custom" onclick="Settings.setTemplate('custom')">
                 <div class="template-preview" style="position: relative; overflow: hidden; background: #fafafa; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 140px; border-radius: 4px; border: 1px dashed var(--border);">
                   <img id="custom-template-img" src="" style="width: 100%; height: 100%; object-fit: contain; display: none;">
@@ -645,7 +629,7 @@
                   <div class="template-badge">Aktif</div>
                 </div>
                 <div class="template-name" style="display: flex; align-items: center; justify-content: space-between; width: 100%; font-size: 0.82rem; margin-top: 0.5rem;">
-                  <span>Tantex Özel</span>
+                  <span>Özel Şablon</span>
                   <div style="display: flex; gap: 0.25rem;">
                     <input type="file" id="custom-template-input" accept="image/png, image/jpeg, image/jpg" style="display: none;" onchange="Settings.handleCustomTemplateUpload(event)">
                     <button class="btn btn-secondary btn-small" style="padding: 2px 6px; font-size: 0.7rem; min-width: auto; height: auto;" onclick="event.stopPropagation(); document.getElementById('custom-template-input').click();" title="Şablon Değiştir/Yükle">
@@ -656,6 +640,20 @@
                     </button>
                   </div>
                 </div>
+              </div>
+
+              <!-- Şablon 2 (Aktif) -->
+              <div class="template-card active" onclick="Settings.setTemplate('default')">
+                <div class="template-preview">
+                  <svg viewBox="0 0 100 140" fill="none" style="width: 100%; height: 100%;">
+                    <rect width="100" height="140" rx="4" fill="white" />
+                    <rect x="10" y="10" width="80" height="20" rx="2" fill="#e2e8f0" />
+                    <rect x="10" y="40" width="80" height="60" rx="2" fill="#f1f5f9" />
+                    <rect x="10" y="110" width="80" height="20" rx="2" fill="#e2e8f0" />
+                  </svg>
+                  <div class="template-badge">Aktif</div>
+                </div>
+                <div class="template-name">Klasik Entrio</div>
               </div>
 
               <!-- Şablon 3 (Yakında) -->
@@ -685,11 +683,11 @@
             <div class="form-stack" style="max-width: 420px; display: flex; flex-direction: column; gap: 1rem;">
               <div>
                 <label class="form-label">Ajan Adresi</label>
-                <input id="agent-url" type="text" class="form-control" placeholder="http://localhost:9198" onchange="PrinterSettings.save()">
+                <input id="agent-url" type="text" class="form-control" placeholder="https://192.168.1.156:9198" onchange="PrinterSettings.save()">
               </div>
               <div>
                 <label class="form-label">API Token (X-Print-Token)</label>
-                <input id="agent-token" type="text" class="form-control" placeholder="Ajanın config.json dosyasındaki apiToken" onchange="PrinterSettings.save()">
+                <input id="agent-token" type="text" class="form-control" placeholder="c53eda589f6c766615eaa44d75e0d6bca1e06cc9bd36fbe6" onchange="PrinterSettings.save()">
               </div>
               <div style="display: none;">
                 <label class="form-label">Etiket Dili</label>
