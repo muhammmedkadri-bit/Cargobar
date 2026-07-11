@@ -209,28 +209,35 @@ function wrapText(text, maxChars) {
 // METİN TO MONOCHROME BITMAP DÖNÜŞTÜRÜCÜ
 // ─────────────────────────────────────────────────────────
 async function renderTextToMonochromeBitmap(text, options = {}) {
-  const { 
-    fontSize = 20, 
-    fontWeight = 'normal', 
-    maxWidthDots = 800, 
-    reverse = false, 
+  const {
+    fontSize = 20,
+    fontWeight = 'normal',
+    maxWidthDots = 800,
     rotation = 0,
-    align = 'left' 
+    align = 'left'
   } = options;
+  // NOT: 'reverse' seçeneği kasıtlı olarak kaldırıldı — tüm etikette beyaz zemin / siyah yazı.
 
+  const fontStr = `${fontWeight} ${fontSize}px sans-serif`;
   const inputLines = (text || '').split('\n');
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  ctx.font = `${fontWeight} ${fontSize}px sans-serif`;
-  
+
+  // Ölçüm için geçici bir canvas oluştur (canvas boyutu henüz sıfır, ama measureText
+  // için font'u ayarlayabiliriz; boyut sıfırsa measureText 0 dönebilir — bu yüzden
+  // geçici context'te font'u ayarlayıp ölçüyoruz.)
+  const measureCanvas = document.createElement('canvas');
+  measureCanvas.width = 1;
+  measureCanvas.height = 1;
+  const mctx = measureCanvas.getContext('2d');
+  mctx.font = fontStr;
+
+  // Kelime kaydırma — genişlik maxWidthDots ile sınırlandırılır
   const lines = [];
   for (const pLine of inputLines) {
     let currentLine = '';
     const words = pLine.split(' ');
     for (const word of words) {
-      const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidthDots && currentLine) {
+      const testLine = currentLine ? currentLine + ' ' + word : word;
+      if (mctx.measureText(testLine).width > maxWidthDots && currentLine) {
         lines.push(currentLine);
         currentLine = word;
       } else {
@@ -239,49 +246,46 @@ async function renderTextToMonochromeBitmap(text, options = {}) {
     }
     if (currentLine) lines.push(currentLine);
   }
-  
+  if (lines.length === 0) lines.push('');
+
   const lineHeight = Math.round(fontSize * 1.2);
-  const totalHeight = Math.max(lineHeight * lines.length, lineHeight);
-  
+  const totalHeight = lineHeight * lines.length;
+
   let actualMaxWidth = 0;
   for (const l of lines) {
-    const w = ctx.measureText(l).width;
+    const w = mctx.measureText(l).width;
     if (w > actualMaxWidth) actualMaxWidth = w;
   }
-  
-  const paddingX = reverse ? 16 : 0;
-  const paddingY = reverse ? 8 : 0;
-  
-  canvas.width = Math.max(8, Math.ceil(actualMaxWidth + paddingX));
-  canvas.height = Math.max(8, Math.ceil(totalHeight + paddingY));
-  
-  ctx.font = `${fontWeight} ${fontSize}px sans-serif`;
+
+  // Asıl canvas — boyutu önceden hesaplanan değerlere göre ayarla
+  const canvas = document.createElement('canvas');
+  canvas.width  = Math.max(4, Math.ceil(actualMaxWidth));
+  canvas.height = Math.max(4, Math.ceil(totalHeight));
+  const ctx = canvas.getContext('2d');
+  ctx.font = fontStr;
   ctx.textBaseline = 'top';
-  
-  ctx.fillStyle = reverse ? 'black' : 'white';
+
+  // Her zaman: beyaz zemin, siyah metin
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-  ctx.fillStyle = reverse ? 'white' : 'black';
-  const startX = reverse ? paddingX/2 : 0;
-  const startY = reverse ? paddingY/2 : 0;
-  
+  ctx.fillStyle = '#000000';
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    let xPos = startX;
+    let xPos = 0;
     if (align === 'center') {
-      const w = ctx.measureText(line).width;
-      xPos = (canvas.width - w) / 2;
+      xPos = (canvas.width - mctx.measureText(line).width) / 2;
     }
-    ctx.fillText(line, xPos, startY + (i * lineHeight));
+    ctx.fillText(line, xPos, i * lineHeight);
   }
-  
+
   let finalCanvas = canvas;
   if (rotation === 90 || rotation === 270) {
     finalCanvas = document.createElement('canvas');
-    finalCanvas.width = canvas.height;
+    finalCanvas.width  = canvas.height;
     finalCanvas.height = canvas.width;
     const fctx = finalCanvas.getContext('2d');
-    fctx.fillStyle = 'white';
+    fctx.fillStyle = '#ffffff';
     fctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
     fctx.save();
     if (rotation === 90) {
@@ -294,7 +298,7 @@ async function renderTextToMonochromeBitmap(text, options = {}) {
     fctx.drawImage(canvas, 0, 0);
     fctx.restore();
   }
-  
+
   return imageToMonochromeBitmap(finalCanvas, finalCanvas.width, finalCanvas.height);
 }
 
@@ -351,52 +355,90 @@ async function buildLabel(data, customTemplateBase64, copies) {
   }
 
   // 2. VARSAYILAN ŞABLON (ENTERPRISE / MODERN)
+  // ─── Bölüm sınırları (dot cinsinden, 203 DPI @ 100mm = 800 dot) ───
+  //  Header (logo + unvan):  Y   0 – 150  (~18.5mm)
+  //  Bölücü çizgi:           Y 150
+  //  GÖNDERİCİ etiketi:      Y 152 – 230  (~10mm)
+  //  Bölücü çizgi:           Y 230
+  //  ALICI bloğu:            Y 232 – 530  (~37mm)
+  //  Bölücü çizgi:           Y 530
+  //  Kargo istatistikleri:   Y 532 – 650  (~14.5mm)
+  //  Bölücü çizgi:           Y 650
+  //  Barkod + kod metni:     Y 655 – 800  (~18mm)
+
   const desiVal = desi?.ucret !== null && desi?.ucret !== undefined ? desi.ucret : '—';
   const kiloVal = desi?.kg ? `${desi.kg} kg` : '—';
   const desiUnit = desi?.kg > 20 && desi?.ucret === desi?.kg ? 'KG' : 'DESİ';
-  
-  // Barkod: Yatay, alt tarafa ortalanmış (Genişlik: 80mm ~640dot, Yükseklik: 15mm ~120dot)
-  const horizontalBarcodeBytes = barcodePNG(tkgCode || '', { type: 'code128', height: 60, barWidth: 3 });
-  const horizontalBarcodeBitmap = await pngBytesToMonochromeBitmap(horizontalBarcodeBytes, mm(80), mm(15), 0);
-  images.push({ bitmap: horizontalBarcodeBitmap, x: mm(10), y: mm(83) });
+
+  // Barkod: Yatay, 80mm genişlik, 14mm yükseklik
+  const horizontalBarcodeBytes = barcodePNG(tkgCode || '', { type: 'code128', height: 56, barWidth: 3 });
+  const horizontalBarcodeBitmap = await pngBytesToMonochromeBitmap(horizontalBarcodeBytes, mm(80), mm(14), 0);
+  images.push({ bitmap: horizontalBarcodeBitmap, x: mm(10), y: 667 });
+
+  // Logo: Ayarlardan veya cb_prefs'ten al; yoksa boş bırak
+  let logoBase64 = null;
+  try {
+    const prefs = JSON.parse(localStorage.getItem('cb_prefs') || '{}');
+    logoBase64 = prefs.logoBase64 || null;
+  } catch {}
 
   let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies })
-    // Dış Çerçeve kalın (4 dot = ~0.5mm)
+    // Dış çerçeve
     .box({ x: 0, y: 0, width: 800, height: 800, thickness: 4 })
-    
-    // --- GÖNDERİCİ arka kutu çizgisi (0-22mm)
-    .line({ x1: 0, y1: mm(22), x2: 800, y2: mm(22), thickness: 2 })
-    // --- Alıcı / Kargo bölümü bölücü çizgi (62mm)
-    .line({ x1: 0, y1: mm(62), x2: 800, y2: mm(62), thickness: 2 })
-    // --- Alt tablo dikey ayırıcılar
-    .line({ x1: mm(33), y1: mm(62), x2: mm(33), y2: mm(76), thickness: 2 })
-    .line({ x1: mm(66), y1: mm(62), x2: mm(66), y2: mm(76), thickness: 2 })
-    // --- Alt tablo alt çizgisi (76mm)
-    .line({ x1: 0, y1: mm(76), x2: 800, y2: mm(76), thickness: 2 });
+    // Header alt çizgisi
+    .line({ x1: 0, y1: 150, x2: 800, y2: 150, thickness: 2 })
+    // GÖNDERİCİ bölücü
+    .line({ x1: 0, y1: 230, x2: 800, y2: 230, thickness: 2 })
+    // ALICI alt çizgisi
+    .line({ x1: 0, y1: 530, x2: 800, y2: 530, thickness: 2 })
+    // İstatistik tablosu dikey ayırıcılar
+    .line({ x1: 265, y1: 530, x2: 265, y2: 650, thickness: 2 })
+    .line({ x1: 530, y1: 530, x2: 530, y2: 650, thickness: 2 })
+    // İstatistik tablosu alt çizgisi
+    .line({ x1: 0, y1: 650, x2: 800, y2: 650, thickness: 2 });
 
-  await addTextBitmap(' GÖNDERİCİ / FROM ', mm(2), mm(2), { fontSize: 20, reverse: true });
-  await addTextBitmap((gonderici?.unvan || 'ŞİRKET ÜNVANI').substring(0, 45), mm(2), mm(7), { fontSize: 32, fontWeight: 'bold' });
-  await addTextBitmap(gonderici?.adres || '', mm(2), mm(13), { fontSize: 22, maxWidthDots: mm(96) });
-  
-  // --- ALICI (22 - 62mm) ---
-  await addTextBitmap(' ALICI / TO ', mm(2), mm(24), { fontSize: 20, reverse: true });
-  await addTextBitmap((alici?.unvan || '').substring(0, 32), mm(2), mm(29), { fontSize: 36, fontWeight: 'bold' });
-  await addTextBitmap(alici?.adres || '', mm(2), mm(36), { fontSize: 24, maxWidthDots: mm(96) });
-  await addTextBitmap(`${alici?.ilce || ''} / ${alici?.il || ''}`.toUpperCase(), mm(2), mm(48), { fontSize: 40, fontWeight: 'bold' });
-  await addTextBitmap(`TEL: ${alici?.tel || '—'}`, mm(2), mm(56), { fontSize: 22 });
-  
-  // --- KARGO BİLGİLERİ (62 - 76mm) ---
-  await addTextBitmap('AĞIRLIK', mm(2), mm(64), { fontSize: 20 });
-  await addTextBitmap(`${kiloVal}`, mm(2), mm(69), { fontSize: 32, fontWeight: 'bold' });
-  
-  await addTextBitmap(desiUnit, mm(35), mm(64), { fontSize: 20 });
-  await addTextBitmap(`${desiVal}`, mm(35), mm(69), { fontSize: 32, fontWeight: 'bold' });
-  
-  await addTextBitmap('TARİH', mm(68), mm(64), { fontSize: 20 });
-  await addTextBitmap(new Date().toLocaleDateString('tr-TR'), mm(68), mm(69), { fontSize: 32, fontWeight: 'bold' });
+  // ── HEADER: Sol logo (30mm kare), sağ unvan+slogan ──
+  if (logoBase64) {
+    try {
+      const logoImg = await loadImg(logoBase64);
+      const logoBitmap = imageToMonochromeBitmap(logoImg, mm(22), mm(16));
+      images.push({ bitmap: logoBitmap, x: mm(3), y: 12 });
+    } catch {}
+  }
+  // Dikey ayırıcı: logo ile metin arasında (sadece logo varsa)
+  if (logoBase64) {
+    lbl = lbl.line({ x1: mm(27), y1: 8, x2: mm(27), y2: 142, thickness: 1 });
+  }
+  const headerTextX = logoBase64 ? mm(29) : mm(3);
+  await addTextBitmap(gonderici?.unvan || 'ŞİRKET ÜNVANI', headerTextX, 14, { fontSize: 34, fontWeight: 'bold', maxWidthDots: mm(68) });
+  await addTextBitmap(gonderici?.slogan || '', headerTextX, 90, { fontSize: 22, maxWidthDots: mm(68) });
 
-  // --- BARKOD BÖLÜMÜ (76 - 100mm) ---
-  await addTextBitmap(tkgCode || '', null, mm(78), { fontSize: 26, align: 'center' }, mm(50));
+  // ── GÖNDERİCİ (Y 152–228) ──
+  await addTextBitmap('GÖNDERİCİ / FROM', mm(3), 155, { fontSize: 20, fontWeight: 'bold' });
+  await addTextBitmap(gonderici?.adres || '', mm(3), 185, { fontSize: 20, maxWidthDots: mm(94) });
+
+  // ── ALICI (Y 232–528) ──
+  await addTextBitmap('ALICI / TO', mm(3), 236, { fontSize: 20, fontWeight: 'bold' });
+  await addTextBitmap((alici?.unvan || '').substring(0, 30), mm(3), 268, { fontSize: 38, fontWeight: 'bold', maxWidthDots: mm(94) });
+  await addTextBitmap(alici?.adres || '', mm(3), 360, { fontSize: 24, maxWidthDots: mm(94) });
+  await addTextBitmap(`${alici?.ilce || ''} / ${alici?.il || ''}`.toUpperCase(), mm(3), 425, { fontSize: 42, fontWeight: 'bold', maxWidthDots: mm(94) });
+  await addTextBitmap(`TEL: ${alici?.tel || '—'}`, mm(3), 498, { fontSize: 22 });
+
+  // ── KARGO İSTATİSTİKLERİ (Y 532–648) ──
+  // Sütun 1: Ağırlık (X 0–265)
+  await addTextBitmap('AGIRLIK', mm(2), 536, { fontSize: 18 });
+  await addTextBitmap(kiloVal, mm(2), 568, { fontSize: 34, fontWeight: 'bold' });
+  // Sütun 2: Desi (X 265–530)
+  await addTextBitmap(desiUnit, mm(35), 536, { fontSize: 18 });
+  await addTextBitmap(String(desiVal), mm(35), 568, { fontSize: 34, fontWeight: 'bold' });
+  // Sütun 3: Tarih (X 530–800)
+  await addTextBitmap('TARIH', mm(68), 536, { fontSize: 18 });
+  await addTextBitmap(new Date().toLocaleDateString('tr-TR'), mm(68), 568, { fontSize: 28, fontWeight: 'bold' });
+
+  // ── BARKOD BÖLÜMÜ (Y 652–800) ──
+  // TKG kodu metni
+  await addTextBitmap(tkgCode || '', null, 654, { fontSize: 24, align: 'center' }, 400);
+  // Barkod resmi images'a yukarıda zaten eklendi (Y: 667)
 
   return { lbl, images };
 }
