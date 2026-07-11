@@ -350,56 +350,249 @@ async function buildLabel(data, customTemplateBase64, copies) {
     }
   }
 
-  // 2. VARSAYILAN ŞABLON (ENTERPRISE / MODERN)
+  // 2. VARSAYILAN ŞABLON — ENTERPRISE MASTER CANVAS
+  // Tüm şablon tek bir 800x800 canvas üzerine çizilir → tek BITMAP komutu
+  const W = 800, H = 800;
+  const mc = document.createElement('canvas');
+  mc.width = W; mc.height = H;
+  const ctx = mc.getContext('2d');
+
+  // ── Yardımcılar ────────────────────────────────────────────────
+  const C = {
+    BLACK: '#000000',
+    WHITE: '#ffffff',
+    GRAY:  '#555555',
+  };
+
+  function fillRect(x, y, w, h, color = C.BLACK) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w, h);
+  }
+  function strokeRect(x, y, w, h, lw = 2, color = C.BLACK) {
+    ctx.strokeStyle = color; ctx.lineWidth = lw;
+    ctx.strokeRect(x + lw/2, y + lw/2, w - lw, h - lw);
+  }
+  function hline(y, lw = 2, x1 = 0, x2 = W) {
+    ctx.strokeStyle = C.BLACK; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
+  }
+  function vline(x, y1, y2, lw = 2) {
+    ctx.strokeStyle = C.BLACK; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, y2); ctx.stroke();
+  }
+  // Canvas'a metin yaz, döndürülen değer: measureText.width
+  function drawText(str, x, y, { size = 22, weight = 'normal', align = 'left', baseline = 'top', color = C.BLACK } = {}) {
+    if (!str) return 0;
+    ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = baseline;
+    ctx.font = `${weight} ${size}px sans-serif`;
+    ctx.fillText(str, x, y);
+    return ctx.measureText(str).width;
+  }
+  // Satır kaydıran metin yazar; alt kenar y koordinatını döndürür
+  function drawWrapped(str, x, y, maxW, size, weight = 'normal', lineH, color = C.BLACK) {
+    if (!str) return y;
+    ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.font = `${weight} ${size}px sans-serif`;
+    const words = str.split(' ');
+    let line = '', curY = y;
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (ctx.measureText(test).width > maxW && line) {
+        ctx.fillText(line, x, curY); line = word; curY += lineH;
+      } else { line = test; }
+    }
+    if (line) { ctx.fillText(line, x, curY); curY += lineH; }
+    return curY;
+  }
+  // Font boyutunu metnin maxW'ya sığmasına göre otomatik küçültür
+  function fitFont(str, maxW, startSize, minSize = 18, weight = 'normal') {
+    let size = startSize;
+    ctx.font = `${weight} ${size}px sans-serif`;
+    while (ctx.measureText(str || '').width > maxW && size > minSize) {
+      size -= 2;
+      ctx.font = `${weight} ${size}px sans-serif`;
+    }
+    return size;
+  }
+
+  const PAD = 12; // kenar boşluğu (dot)
+
+  // ══ 0. BEYAZ ZEMIN + DIŞ ÇERÇEVE ════════════════════════════
+  fillRect(0, 0, W, H, C.WHITE);
+  strokeRect(0, 0, W, H, 4);
+
+  // ══ 1. HEADER (0 → 118) ══════════════════════════════════════
+  // Üstte ince siyah dekoratif şerit (marka hissi)
+  fillRect(0, 0, W, 5, C.BLACK);
+
+  // Logo alanı: sol, 5 → 113 (108x108 dot ≈ 13.5mm kare)
+  const LOGO_X = 5, LOGO_Y = 5, LOGO_S = 108;
+  
+  let logoLoaded = false;
+  try {
+    const rawPrefs = localStorage.getItem('cb_prefs');
+    if (rawPrefs) {
+      const prefs = JSON.parse(rawPrefs);
+      // Olası logo alanlarını dene
+      const logoSrc = prefs?.company?.logo || prefs?.logoBase64 || prefs?.logo;
+      if (logoSrc && logoSrc.startsWith('data:')) {
+        const logoImg = await loadImg(logoSrc);
+        const scale = Math.min((LOGO_S - 8) / logoImg.width, (LOGO_S - 8) / logoImg.height);
+        const lw = logoImg.width * scale, lh = logoImg.height * scale;
+        ctx.drawImage(logoImg,
+          LOGO_X + (LOGO_S - lw) / 2,
+          LOGO_Y + (LOGO_S - lh) / 2,
+          lw, lh);
+        logoLoaded = true;
+      }
+    }
+  } catch {}
+
+  if (!logoLoaded) {
+    // Fallback: şirket baş harfleri, siyah kare içinde beyaz metin
+    fillRect(LOGO_X + 4, LOGO_Y + 4, LOGO_S - 8, LOGO_S - 8, C.BLACK);
+    const initials = (gonderici?.unvan || 'E')
+      .split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+    drawText(initials,
+      LOGO_X + LOGO_S / 2,
+      LOGO_Y + LOGO_S / 2,
+      { size: initials.length > 1 ? 44 : 54, weight: 'bold', align: 'center', baseline: 'middle', color: C.WHITE });
+  }
+
+  // Logo dış çerçevesi (ince)
+  strokeRect(LOGO_X, LOGO_Y, LOGO_S, LOGO_S, 1.5);
+
+  // Şirket adı + slogan: logo sağında, dikey olarak ortalanmış
+  const hdrTextX = LOGO_X + LOGO_S + 14;
+  const hdrTextMaxW = W - hdrTextX - PAD;
+  const companyName = gonderici?.unvan || '';
+  const companySlogan = gonderici?.slogan || '';
+
+  const nameFontSize = fitFont(companyName, hdrTextMaxW, 38, 22, 'bold');
+  const nameLineH = nameFontSize * 1.25;
+  const sloganLineH = 24;
+  const totalTextH = nameLineH + (companySlogan ? sloganLineH + 4 : 0);
+  const textStartY = LOGO_Y + (LOGO_S - totalTextH) / 2;
+
+  drawText(companyName, hdrTextX, textStartY,
+    { size: nameFontSize, weight: 'bold' });
+  if (companySlogan) {
+    drawText(companySlogan, hdrTextX, textStartY + nameLineH + 4,
+      { size: 21, color: C.GRAY });
+  }
+
+  const HDR_H = 118;
+  hline(HDR_H, 3); // Kalın ayırıcı çizgi
+
+  // ══ 2. ALICI BÖLMESİ (118 → 498) ═════════════════════════════
+  // "ALICI / TO" etiketi: siyah arka plan, beyaz metin
+  const ALICI_BAR_H = 30;
+  fillRect(0, HDR_H, W, ALICI_BAR_H, C.BLACK);
+  drawText('  ALICI / TO', 0, HDR_H + (ALICI_BAR_H - 20) / 2,
+    { size: 20, weight: 'bold', color: C.WHITE, baseline: 'top' });
+
+  let recY = HDR_H + ALICI_BAR_H + 10;
+
+  // Alıcı adı — en büyük, en kalın
+  const recName = alici?.unvan || alici?.ad || '';
+  const recNameSize = fitFont(recName, W - PAD * 2, 46, 24, 'bold');
+  drawText(recName, PAD, recY, { size: recNameSize, weight: 'bold' });
+  recY += recNameSize * 1.3 + 6;
+
+  // Adres (satır kayan)
+  recY = drawWrapped(alici?.adres || '', PAD, recY, W - PAD * 2, 25, 'normal', 30);
+  recY += 4;
+
+  // Telefon
+  if (alici?.tel) {
+    drawText(`☎  ${alici.tel}`, PAD, recY, { size: 23 });
+    recY += 32;
+  }
+
+  // İl/İlçe — büyük, sağa dayalı, altta (kargo sınıflandırma için kritik)
+  const cityStr = [alici?.ilce, alici?.il].filter(Boolean).join(' / ').toUpperCase();
+  const cityFontSize = fitFont(cityStr, W - PAD * 2, 38, 24, 'bold');
+  drawText(cityStr, W - PAD, 468,
+    { size: cityFontSize, weight: 'bold', align: 'right', baseline: 'top' });
+
+  const ALICI_BOTTOM = 498;
+  hline(ALICI_BOTTOM, 3);
+
+  // ══ 3. GÖNDERİCİ BÖLMESİ (498 → 578) ════════════════════════
+  const GOND_BAR_W = Math.round(W * 0.38);
+  fillRect(0, ALICI_BOTTOM, GOND_BAR_W, 26, C.BLACK);
+  drawText('  GÖNDERİCİ / FROM', 0, ALICI_BOTTOM + 4,
+    { size: 17, weight: 'bold', color: C.WHITE, baseline: 'top' });
+
+  const senderLine = [gonderici?.unvan, gonderici?.adres, gonderici?.tel]
+    .filter(Boolean).join('  ·  ');
+  drawWrapped(senderLine, PAD, ALICI_BOTTOM + 32, W - PAD * 2, 21, 'normal', 26);
+
+  const GOND_BOTTOM = 578;
+  hline(GOND_BOTTOM, 2);
+
+  // ══ 4. BİLGİ BANDI (578 → 652) ══════════════════════════════
+  const INFO_H = 74;
+  const INFO_Y = GOND_BOTTOM;
+  const COL = W / 3;
+
+  vline(COL,     INFO_Y, INFO_Y + INFO_H, 1.5);
+  vline(COL * 2, INFO_Y, INFO_Y + INFO_H, 1.5);
+
   const desiVal = desi?.ucret !== null && desi?.ucret !== undefined ? desi.ucret : '—';
-  const kiloVal = desi?.kg ? `${desi.kg} kg` : '—';
-  const desiUnit = desi?.kg > 20 && desi?.ucret === desi?.kg ? 'KG' : 'DESİ';
-  
-  // Barkod: Yatay, alt tarafa ortalanmış (Genişlik: 80mm ~640dot, Yükseklik: 15mm ~120dot)
-  const horizontalBarcodeBytes = barcodePNG(tkgCode || '', { type: 'code128', height: 60, barWidth: 3 });
-  const horizontalBarcodeBitmap = await pngBytesToMonochromeBitmap(horizontalBarcodeBytes, mm(80), mm(15), 0);
-  images.push({ bitmap: horizontalBarcodeBitmap, x: mm(10), y: mm(83) });
+  const kiloVal = desi?.kg ? desi.kg : '—';
+  const desiUnit = (desi?.kg > 20 && desi?.ucret === desi?.kg) ? 'KG' : 'DESİ';
 
-  let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies })
-    // Dış Çerçeve kalın (4 dot = ~0.5mm)
-    .box({ x: 0, y: 0, width: 800, height: 800, thickness: 4 })
-    
-    // --- GÖNDERİCİ arka kutu çizgisi (0-22mm)
-    .line({ x1: 0, y1: mm(22), x2: 800, y2: mm(22), thickness: 2 })
-    // --- Alıcı / Kargo bölümü bölücü çizgi (62mm)
-    .line({ x1: 0, y1: mm(62), x2: 800, y2: mm(62), thickness: 2 })
-    // --- Alt tablo dikey ayırıcılar
-    .line({ x1: mm(33), y1: mm(62), x2: mm(33), y2: mm(76), thickness: 2 })
-    .line({ x1: mm(66), y1: mm(62), x2: mm(66), y2: mm(76), thickness: 2 })
-    // --- Alt tablo alt çizgisi (76mm)
-    .line({ x1: 0, y1: mm(76), x2: 800, y2: mm(76), thickness: 2 });
+  function infoCol(label, value, cx) {
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillStyle = C.BLACK;
+    ctx.font = '14px sans-serif';
+    ctx.fillText(label, cx, INFO_Y + 7);
+    ctx.font = `bold 30px sans-serif`;
+    ctx.fillText(String(value), cx, INFO_Y + 25);
+  }
+  infoCol(`AĞIRLIK (${desiUnit})`, desiVal, COL * 0.5);
+  infoCol('KİLO (kg)',             kiloVal,  COL * 1.5);
+  infoCol('TARİH',
+    new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
+    COL * 2.5);
 
-  await addTextBitmap(' GÖNDERİCİ / FROM ', mm(2), mm(2), { fontSize: 20, reverse: true });
-  await addTextBitmap((gonderici?.unvan || 'ŞİRKET ÜNVANI').substring(0, 45), mm(2), mm(7), { fontSize: 32, fontWeight: 'bold' });
-  await addTextBitmap(gonderici?.adres || '', mm(2), mm(13), { fontSize: 22, maxWidthDots: mm(96) });
-  
-  // --- ALICI (22 - 62mm) ---
-  await addTextBitmap(' ALICI / TO ', mm(2), mm(24), { fontSize: 20, reverse: true });
-  await addTextBitmap((alici?.unvan || '').substring(0, 32), mm(2), mm(29), { fontSize: 36, fontWeight: 'bold' });
-  await addTextBitmap(alici?.adres || '', mm(2), mm(36), { fontSize: 24, maxWidthDots: mm(96) });
-  await addTextBitmap(`${alici?.ilce || ''} / ${alici?.il || ''}`.toUpperCase(), mm(2), mm(48), { fontSize: 40, fontWeight: 'bold' });
-  await addTextBitmap(`TEL: ${alici?.tel || '—'}`, mm(2), mm(56), { fontSize: 22 });
-  
-  // --- KARGO BİLGİLERİ (62 - 76mm) ---
-  await addTextBitmap('AĞIRLIK', mm(2), mm(64), { fontSize: 20 });
-  await addTextBitmap(`${kiloVal}`, mm(2), mm(69), { fontSize: 32, fontWeight: 'bold' });
-  
-  await addTextBitmap(desiUnit, mm(35), mm(64), { fontSize: 20 });
-  await addTextBitmap(`${desiVal}`, mm(35), mm(69), { fontSize: 32, fontWeight: 'bold' });
-  
-  await addTextBitmap('TARİH', mm(68), mm(64), { fontSize: 20 });
-  await addTextBitmap(new Date().toLocaleDateString('tr-TR'), mm(68), mm(69), { fontSize: 32, fontWeight: 'bold' });
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
 
-  // --- BARKOD BÖLÜMÜ (76 - 100mm) ---
-  await addTextBitmap(tkgCode || '', null, mm(78), { fontSize: 26, align: 'center' }, mm(50));
+  const INFO_BOTTOM = INFO_Y + INFO_H;
+  hline(INFO_BOTTOM, 2);
 
-  return { lbl, images };
+  // ══ 5. BARKOD BÖLMESİ (652 → 800) ═══════════════════════════
+  // Barkodu doğrudan master canvas üzerine çiz (ayrı BITMAP komutuna gerek yok)
+  const BC_Y      = INFO_BOTTOM + 8;
+  const BC_W      = 720;
+  const BC_H      = 100;
+  const BC_X      = (W - BC_W) / 2;
+
+  try {
+    const bcBytes = barcodePNG(tkgCode || '', { type: 'code128', height: 70, barWidth: 3 });
+    const bcBlob  = new Blob([bcBytes], { type: 'image/png' });
+    const bcUrl   = URL.createObjectURL(bcBlob);
+    const bcImg   = await loadImg(bcUrl);
+    URL.revokeObjectURL(bcUrl);
+
+    // Yazıcı Zjiang ters bit mantığı kullanıyor; monochrome için siyah çizgiler korunacak
+    ctx.drawImage(bcImg, BC_X, BC_Y, BC_W, BC_H);
+  } catch (e) {
+    console.warn('[PrintEngine] Barkod çizilemedi:', e);
+  }
+
+  // TKG kodu metni (barkodun altında)
+  const TKG_Y = BC_Y + BC_H + 4;
+  drawText(tkgCode || '', W / 2, TKG_Y, { size: 22, align: 'center' });
+
+  // ══ Tüm canvas'ı tek monochrome bitmap'e çevir ══════════════
+  const masterBitmap = imageToMonochromeBitmap(mc, W, H);
+
+  const lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies });
+  return { lbl, images: [{ bitmap: masterBitmap, x: 0, y: 0 }] };
 }
+
 
 // Resimleri TSPL'e binary olarak yerleştirmek için özel derleyici
 function compileToTSPLBase64(lbl, images, copies) {
