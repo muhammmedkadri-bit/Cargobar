@@ -378,7 +378,7 @@ async function buildLabel(data, customTemplateBase64, copies) {
       recY = drawWrapped(alici?.adres || '', 16, recY, 360, 23, 'normal', 28);
       
       if (alici?.tel) {
-        drawText(`☎  ${alici.tel}`, 16, recY + 4, { size: 21 });
+        drawText(alici.tel, 16, recY + 9, { size: 21 });
       }
 
       const cityStr = [alici?.ilce, alici?.il].filter(Boolean).join(' / ').toLocaleUpperCase('tr-TR');
@@ -397,13 +397,13 @@ async function buildLabel(data, customTemplateBase64, copies) {
       const desiVal = String(desi?.ucret !== null && desi?.ucret !== undefined ? desi.ucret : '0');
       drawText(desiVal, 714, 550, { size: 32, weight: 'bold', align: 'center' });
 
-      // --- 6. QR CODE (Lacivert Box: x ~54, y ~661, w 100, h 100) — 20px AŞAĞI KAYDIRILDI
+      // --- 6. QR CODE (Lacivert Box: x ~64, y ~700, w 80, h 80) — BARKOD HİZASINA DİKEY ORTALANDI
       try {
         const qrCanvas = document.createElement('canvas');
-        await QRCode.toCanvas(qrCanvas, 'www.tantex.com.tr', { margin: 0, width: 100 });
-        ctx.drawImage(qrCanvas, 54, 661, 100, 100);
+        await QRCode.toCanvas(qrCanvas, 'www.tantex.com.tr', { margin: 0, width: 80 });
+        ctx.drawImage(qrCanvas, 64, 700, 80, 80);
         // QR kodun altına küçük adres metni
-        drawText('www.tantex.com.tr', 104, 765, { size: 14, align: 'center' });
+        drawText('www.tantex.com.tr', 104, 784, { size: 14, align: 'center' });
       } catch (e) {
         console.warn('[PrintEngine] Özel şablon QR kod çizilemedi:', e);
       }
