@@ -13,7 +13,6 @@
 
 import { label } from 'https://esm.sh/portakal';
 import { tsc } from 'https://esm.sh/portakal/tsc';
-import { escpos } from 'https://esm.sh/portakal/escpos';
 import { barcodePNG } from 'https://esm.sh/etiket';
 
 // ─────────────────────────────────────────────────────────
@@ -249,7 +248,7 @@ async function buildLabel(data, customTemplateBase64, copies) {
 }
 
 function compile(lbl) {
-  return Settings.labelLang === 'escpos' ? escpos.compile(lbl) : tsc.compile(lbl);
+  return tsc.compile(lbl);
 }
 
 // ─────────────────────────────────────────────────────────
@@ -292,10 +291,9 @@ async function previewShippingLabel(data, copies = 1) {
     try { customTemplate = JSON.parse(rawPrefs).customTemplate || null; } catch {}
   }
   const lbl = await buildLabel(data, customTemplate, copies);
-  const langMod = Settings.labelLang === 'escpos' ? escpos : tsc;
-  const code = langMod.compile(lbl);
-  const svg = langMod.preview(lbl);
-  const validation = langMod.validate(code);
+  const code = tsc.compile(lbl);
+  const svg = tsc.preview(lbl);
+  const validation = tsc.validate(code);
   return { svg, code, validation };
 }
 
