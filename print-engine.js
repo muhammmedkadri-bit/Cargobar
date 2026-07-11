@@ -313,39 +313,119 @@ async function buildLabel(data, customTemplateBase64, copies) {
     images.push({ bitmap, x: finalX, y });
   }
 
-  // 1. ÖZEL ŞABLON AKTİF İSE (Python Absolute Koordinatları)
+  // 1. ÖZEL ŞABLON AKTİF İSE (Tantex Custom Layout)
   if (customTemplateBase64) {
     try {
-      const img = await loadImg(customTemplateBase64);
-      const bgBitmap = imageToMonochromeBitmap(img, 800, 800);
-      images.push({ bitmap: bgBitmap, x: 0, y: 0 });
+      const W = 800, H = 800;
+      const mc = document.createElement('canvas');
+      mc.width = W; mc.height = H;
+      const ctx = mc.getContext('2d');
 
-      const horizontalBarcodeBytes = barcodePNG(tkgCode || '', { type: 'code128', height: 44, barWidth: 2 });
-      const horizontalBarcodeBitmap = await pngBytesToMonochromeBitmap(horizontalBarcodeBytes, 320, 80, 0);
-      images.push({ bitmap: horizontalBarcodeBitmap, x: mm(30), y: mm(84) });
+      const C = {
+        BLACK: '#000000',
+        WHITE: '#ffffff',
+        GRAY:  '#555555',
+      };
 
-      const toTrUpper = (str) => (str || '').replace(/i/g, 'İ').toUpperCase();
+      function drawText(str, x, y, { size = 22, weight = 'normal', align = 'left', baseline = 'top', color = C.BLACK } = {}) {
+        if (!str) return 0;
+        ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = baseline;
+        ctx.font = `${weight} ${size}px sans-serif`;
+        ctx.fillText(str, x, y);
+        return ctx.measureText(str).width;
+      }
 
-      const receiverTitle = toTrUpper(alici?.unvan);
-      const receiverAddr = toTrUpper(alici?.adres);
-      const receiverTel = toTrUpper(alici?.tel);
-      const desiStr = `DESİ: ${desi?.desi || '0'} DS.`;
+      function drawWrapped(str, x, y, maxW, size, weight = 'normal', lineH, color = C.BLACK) {
+        if (!str) return y;
+        ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.font = `${weight} ${size}px sans-serif`;
+        const words = str.split(' ');
+        let line = '', curY = y;
+        for (const word of words) {
+          const test = line ? `${line} ${word}` : word;
+          if (ctx.measureText(test).width > maxW && line) {
+            ctx.fillText(line, x, curY); line = word; curY += lineH;
+          } else { line = test; }
+        }
+        if (line) { ctx.fillText(line, x, curY); curY += lineH; }
+        return curY;
+      }
 
-      let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies });
+      function fitFont(str, maxW, startSize, minSize = 18, weight = 'normal') {
+        let size = startSize;
+        ctx.font = `${weight} ${size}px sans-serif`;
+        while (ctx.measureText(str || '').width > maxW && size > minSize) {
+          size -= 2;
+          ctx.font = `${weight} ${size}px sans-serif`;
+        }
+        return size;
+      }
+
+      // Draw background image
+      const bgImg = await loadImg(customTemplateBase64);
+      ctx.drawImage(bgImg, 0, 0, W, H);
+
+      // --- 1. SENDER DETAILS (Eflatun Box: x ~12 to ~472, y ~185 to ~244) ---
+      const senderText = [gonderici?.adres, gonderici?.tel].filter(Boolean).join(' - ');
+      drawWrapped(senderText, 16, 188, 450, 20, 'normal', 24);
+
+      // --- 2. RECEIVER DETAILS (Kırmızı Box: x ~16 to ~380, y ~328 to ~640) ---
+      const recName = alici?.unvan || alici?.ad || '';
+      const recNameSize = fitFont(recName, 360, 36, 22, 'bold');
+      drawText(recName, 16, 335, { size: recNameSize, weight: 'bold' });
       
-      await addTextBitmap(receiverTitle, mm(0.22), mm(45.34), { fontSize: 20, fontWeight: 'bold' });
-      await addTextBitmap(receiverAddr, mm(0.22), mm(53.00), { fontSize: 20, maxWidthDots: 600 });
-      await addTextBitmap(receiverTel, mm(0.22), mm(78.00), { fontSize: 20 });
+      let recY = 335 + recNameSize * 1.3 + 6;
+      recY = drawWrapped(alici?.adres || '', 16, recY, 360, 23, 'normal', 28);
+      
+      if (alici?.tel) {
+        drawText(`☎  ${alici.tel}`, 16, recY + 4, { size: 21 });
+      }
 
-      await addTextBitmap(`EN : ${desi?.en || '0'}`, mm(51.76), mm(56.59), { fontSize: 20 });
-      await addTextBitmap(`BOY : ${desi?.boy || '0'}`, mm(51.76), mm(61.00), { fontSize: 20 });
-      await addTextBitmap(`YUKSEKLIK : ${desi?.yuk || '0'}`, mm(51.76), mm(65.50), { fontSize: 20 });
-      await addTextBitmap(`KILO : ${desi?.kg || '0'}`, mm(51.76), mm(70.00), { fontSize: 20 });
-      await addTextBitmap(desiStr, mm(51.76), mm(76.00), { fontSize: 20 });
+      const cityStr = [alici?.ilce, alici?.il].filter(Boolean).join(' / ').toUpperCase();
+      const cityFontSize = fitFont(cityStr, 360, 32, 22, 'bold');
+      drawText(cityStr, 16, 570, { size: cityFontSize, weight: 'bold' });
 
-      await addTextBitmap(tkgCode || '', null, mm(95), { fontSize: 20, align: 'center' }, mm(50));
+      // --- 3. DIMENSIONS / ÖLÇÜLER (Turkuaz Box: Center x ~516, y ~416 to ~516) ---
+      const dims = `${desi?.en || '0'}x${desi?.boy || '0'}x${desi?.yuk || '0'}`;
+      drawText(dims, 516, 440, { size: 30, weight: 'bold', align: 'center' });
 
-      return { lbl, images };
+      // --- 4. WEIGHT / AĞIRLIK (Turuncu Box: Center x ~714, y ~408 to ~470) ---
+      const weightVal = String(desi?.kg || '0');
+      drawText(weightVal, 714, 420, { size: 32, weight: 'bold', align: 'center' });
+
+      // --- 5. DESI / HACİM (Pembe Box: Center x ~714, y ~524 to ~586) ---
+      const desiVal = String(desi?.ucret !== null && desi?.ucret !== undefined ? desi.ucret : '0');
+      drawText(desiVal, 714, 535, { size: 32, weight: 'bold', align: 'center' });
+
+      // --- 6. QR CODE (Lacivert Box: x ~54, y ~680, w 100, h 100) ---
+      try {
+        const qrCanvas = document.createElement('canvas');
+        await QRCode.toCanvas(qrCanvas, 'www.tantex.com.tr', { margin: 0, width: 100 });
+        ctx.drawImage(qrCanvas, 54, 680, 100, 100);
+      } catch (e) {
+        console.warn('[PrintEngine] Özel şablon QR kod çizilemedi:', e);
+      }
+
+      // --- 7. BARCODE (Yeşil Box: x ~280, y ~685, w ~480, h ~70) ---
+      try {
+        const bcBytes = barcodePNG(tkgCode || '', { type: 'code128', height: 70, barWidth: 2 });
+        const bcBlob  = new Blob([bcBytes], { type: 'image/png' });
+        const bcUrl   = URL.createObjectURL(bcBlob);
+        const bcImg   = await loadImg(bcUrl);
+        URL.revokeObjectURL(bcUrl);
+        ctx.drawImage(bcImg, 280, 685, 480, 70);
+      } catch (e) {
+        console.warn('[PrintEngine] Özel şablon barkod çizilemedi:', e);
+      }
+
+      // TKG text under barcode
+      drawText(tkgCode || '', 520, 759, { size: 21, align: 'center' });
+
+      // Convert to monochrome bitmap
+      const masterBitmap = imageToMonochromeBitmap(mc, W, H);
+      let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies });
+      return { lbl, images: [{ bitmap: masterBitmap, x: 0, y: 0 }] };
+
     } catch (e) {
       console.error('Özel şablon yüklenirken hata oluştu, varsayılan şablona dönülüyor.', e);
     }
