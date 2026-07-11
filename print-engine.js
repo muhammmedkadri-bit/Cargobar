@@ -11,9 +11,20 @@
  *   <script type="module" src="print-engine.js"></script>
  */
 
-import { label } from 'https://esm.sh/portakal';
-import { tsc } from 'https://esm.sh/portakal/tsc';
-import { barcodePNG } from 'https://esm.sh/etiket';
+// Savunmacı import: hangi isimle export edilmişse (named / default) onu yakala
+async function loadPortakalModule(path) {
+  const mod = await import(path);
+  return mod.default ?? mod;
+}
+
+const coreMod = await loadPortakalModule('https://esm.sh/portakal');
+const label = coreMod.label ?? coreMod.default?.label;
+
+const tscMod = await loadPortakalModule('https://esm.sh/portakal/tsc');
+const tsc = tscMod.tsc ?? tscMod.default ?? tscMod;
+
+const etiketMod = await loadPortakalModule('https://esm.sh/etiket');
+const barcodePNG = etiketMod.barcodePNG ?? etiketMod.default?.barcodePNG;
 
 // ─────────────────────────────────────────────────────────
 // AYARLAR (localStorage üzerinden kalıcı; Ayarlar ekranından güncellenir)
