@@ -80,7 +80,7 @@ function imageToMonochromeBitmap(imgElement, targetWidth, targetHeight) {
       // Zjiang firmware'i görünüşe göre Mode 0 için standart TSPL (1=Siyah, 0=Beyaz) 
       // mantığını TERS anlıyor (0=Siyah, 1=Beyaz). 
       // Beyaz (arka plan) pikseller için bit=1 gönderiyoruz.
-      if (gray >= 128) {
+      if (gray >= 180) { // Eşik değeri 128'den 180'e çıkarılarak gri kenarlar siyaha yuvarlanır, metinler kalınlaşır
         const byteIdx = y * bytesPerRow + Math.floor(x / 8);
         const bitIdx = 7 - (x % 8);
         buffer[byteIdx] |= (1 << bitIdx);
@@ -381,13 +381,13 @@ async function buildLabel(data, customTemplateBase64, copies) {
         drawText(`☎  ${alici.tel}`, 16, recY + 4, { size: 21 });
       }
 
-      const cityStr = [alici?.ilce, alici?.il].filter(Boolean).join(' / ').toUpperCase();
+      const cityStr = [alici?.ilce, alici?.il].filter(Boolean).join(' / ').toLocaleUpperCase('tr-TR');
       const cityFontSize = fitFont(cityStr, 360, 32, 22, 'bold');
       drawText(cityStr, 16, 570, { size: cityFontSize, weight: 'bold' });
 
-      // --- 3. DIMENSIONS / ÖLÇÜLER (Turkuaz Box: Center x ~516, y ~416 to ~516) ---
+      // --- 3. DIMENSIONS / ÖLÇÜLER (Turkuaz Box: Center x ~516, y ~416 to ~516) — 15px AŞAĞI KAYDIRILDI
       const dims = `${desi?.en || '0'}x${desi?.boy || '0'}x${desi?.yuk || '0'}`;
-      drawText(dims, 516, 455, { size: 30, weight: 'bold', align: 'center' });
+      drawText(dims, 516, 470, { size: 30, weight: 'bold', align: 'center' });
 
       // --- 4. WEIGHT / AĞIRLIK (Turuncu Box: Center x ~714, y ~408 to ~470) ---
       const weightVal = String(desi?.kg || '0');
@@ -397,29 +397,31 @@ async function buildLabel(data, customTemplateBase64, copies) {
       const desiVal = String(desi?.ucret !== null && desi?.ucret !== undefined ? desi.ucret : '0');
       drawText(desiVal, 714, 550, { size: 32, weight: 'bold', align: 'center' });
 
-      // --- 6. QR CODE (Lacivert Box: x ~54, y ~680, w 100, h 100) ---
+      // --- 6. QR CODE (Lacivert Box: x ~54, y ~661, w 100, h 100) — 20px AŞAĞI KAYDIRILDI
       try {
         const qrCanvas = document.createElement('canvas');
         await QRCode.toCanvas(qrCanvas, 'www.tantex.com.tr', { margin: 0, width: 100 });
-        ctx.drawImage(qrCanvas, 54, 680, 100, 100);
+        ctx.drawImage(qrCanvas, 54, 661, 100, 100);
+        // QR kodun altına küçük adres metni
+        drawText('www.tantex.com.tr', 104, 765, { size: 14, align: 'center' });
       } catch (e) {
         console.warn('[PrintEngine] Özel şablon QR kod çizilemedi:', e);
       }
 
-      // --- 7. BARCODE (Yeşil Box: x ~280, y ~685, w ~480, h ~70) ---
+      // --- 7. BARCODE (Yeşil Box: x ~280, y ~705, w ~480, h ~70) — 20px AŞAĞI KAYDIRILDI
       try {
         const bcBytes = barcodePNG(tkgCode || '', { type: 'code128', height: 70, barWidth: 2 });
         const bcBlob  = new Blob([bcBytes], { type: 'image/png' });
         const bcUrl   = URL.createObjectURL(bcBlob);
         const bcImg   = await loadImg(bcUrl);
         URL.revokeObjectURL(bcUrl);
-        ctx.drawImage(bcImg, 280, 685, 480, 70);
+        ctx.drawImage(bcImg, 280, 705, 480, 70);
       } catch (e) {
         console.warn('[PrintEngine] Özel şablon barkod çizilemedi:', e);
       }
 
-      // TKG text under barcode
-      drawText(tkgCode || '', 520, 759, { size: 21, align: 'center' });
+      // TKG text under barcode (759 -> 779)
+      drawText(tkgCode || '', 520, 779, { size: 21, align: 'center' });
 
       // Convert to monochrome bitmap
       const masterBitmap = imageToMonochromeBitmap(mc, W, H);
@@ -583,7 +585,7 @@ async function buildLabel(data, customTemplateBase64, copies) {
   }
 
   // İl/İlçe — büyük, sağa dayalı, altta (kargo sınıflandırma için kritik)
-  const cityStr = [alici?.ilce, alici?.il].filter(Boolean).join(' / ').toUpperCase();
+  const cityStr = [alici?.ilce, alici?.il].filter(Boolean).join(' / ').toLocaleUpperCase('tr-TR');
   const cityFontSize = fitFont(cityStr, W - PAD * 2, 38, 24, 'bold');
   drawText(cityStr, W - PAD, ALICI_BOTTOM - 40,
     { size: cityFontSize, weight: 'bold', align: 'right', baseline: 'top' });
