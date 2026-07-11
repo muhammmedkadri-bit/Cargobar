@@ -709,6 +709,70 @@
               <div id="label-preview" style="margin-top: 1rem; max-width: 400px; background: white; border: 1px solid var(--border); border-radius: 4px; padding: 10px; display: none;">
                 <!-- Önizleme SVG buraya yüklenecek -->
               </div>
+
+              <!-- ── Mobil Sertifika ───────────────────────────────── -->
+              <div style="margin-top: 1.5rem; padding: 1.25rem; background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.08) 100%); border: 1px solid rgba(99,102,241,0.25); border-radius: 10px;">
+                <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
+                  <span style="font-size: 1.3rem;">📱</span>
+                  <span style="font-weight: 700; font-size: 0.97rem;">Mobil Cihazdan Yazdırma</span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1rem; line-height: 1.5;">
+                  Telefon veya tablet üzerinden yazdırabilmek için bu sertifikayı bir kez cihazınıza yükleyin, 
+                  ardından Ajan Adresi'ni <code style="background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 4px; font-size: 0.8rem;">https://192.168.1.156:9198</code> olarak ayarlayın.
+                </p>
+                <a href="/mobil-sertifika.pem" download="cargobar-print-agent-sertifika.pem"
+                   style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.55rem 1.1rem; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border-radius: 8px; font-weight: 600; font-size: 0.875rem; text-decoration: none; box-shadow: 0 2px 8px rgba(99,102,241,0.35); transition: opacity 0.2s;"
+                   onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+                  ⬇ Mobil Sertifika İndir
+                </a>
+
+                <button onclick="document.getElementById('cert-instructions').style.display = document.getElementById('cert-instructions').style.display === 'none' ? 'block' : 'none';"
+                        style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; background: transparent; border: 1px solid rgba(99,102,241,0.4); color: var(--text-muted); border-radius: 8px; font-size: 0.85rem; cursor: pointer; margin-left: 0.5rem; transition: all 0.2s;"
+                        onmouseover="this.style.borderColor='rgba(99,102,241,0.8)'" onmouseout="this.style.borderColor='rgba(99,102,241,0.4)'">
+                  ❓ Kurulum Talimatları
+                </button>
+
+                <div id="cert-instructions" style="display: none; margin-top: 1.25rem;">
+                  <!-- iPhone -->
+                  <details open style="margin-bottom: 0.75rem; border: 1px solid rgba(99,102,241,0.2); border-radius: 8px; overflow: hidden;">
+                    <summary style="padding: 0.7rem 1rem; font-weight: 700; font-size: 0.9rem; cursor: pointer; background: rgba(99,102,241,0.07); display: flex; align-items: center; gap: 0.5rem; list-style: none; user-select: none;">
+                      🍎 iPhone / iPad (Safari veya Chrome)
+                    </summary>
+                    <ol style="margin: 0; padding: 0.9rem 1rem 0.9rem 2rem; font-size: 0.85rem; line-height: 1.85; color: var(--text-secondary);">
+                      <li>Yukarıdaki butona basıp sertifikayı indirin.</li>
+                      <li>Çıkan <strong>"Profil İndirildi"</strong> bildirimine dokunun → <strong>Yükle</strong>'ye basın (Face ID/şifre isteyebilir).</li>
+                      <li style="background: rgba(239,68,68,0.08); margin: 0.4rem -0.5rem; padding: 0.4rem 0.5rem; border-radius: 6px; border-left: 3px solid #ef4444;">
+                        ⚠️ <strong>En çok atlanan adım:</strong> <em>Ayarlar → Genel → Hakkında → Sertifika Güven Ayarları</em>'na gidin, yeni sertifikanın yanındaki anahtarı açıp <strong>"Tam Güven"</strong>i etkinleştirin.
+                      </li>
+                    </ol>
+                  </details>
+
+                  <!-- Android -->
+                  <details style="margin-bottom: 0.75rem; border: 1px solid rgba(99,102,241,0.2); border-radius: 8px; overflow: hidden;">
+                    <summary style="padding: 0.7rem 1rem; font-weight: 700; font-size: 0.9rem; cursor: pointer; background: rgba(99,102,241,0.07); list-style: none; user-select: none;">
+                      🤖 Android
+                    </summary>
+                    <ol style="margin: 0; padding: 0.9rem 1rem 0.9rem 2rem; font-size: 0.85rem; line-height: 1.85; color: var(--text-secondary);">
+                      <li>Butona basıp dosyayı indirin.</li>
+                      <li><em>Ayarlar → Güvenlik (veya Gizlilik) → Daha Fazla Güvenlik Ayarı → Sertifikaları Yükle</em> yolunu izleyin.</li>
+                      <li><strong>CA sertifikası</strong> olarak seçip indirilen dosyayı gösterin.</li>
+                    </ol>
+                  </details>
+
+                  <!-- Mac -->
+                  <details style="border: 1px solid rgba(99,102,241,0.2); border-radius: 8px; overflow: hidden;">
+                    <summary style="padding: 0.7rem 1rem; font-weight: 700; font-size: 0.9rem; cursor: pointer; background: rgba(99,102,241,0.07); list-style: none; user-select: none;">
+                      💻 Mac
+                    </summary>
+                    <ol style="margin: 0; padding: 0.9rem 1rem 0.9rem 2rem; font-size: 0.85rem; line-height: 1.85; color: var(--text-secondary);">
+                      <li>İndirilen dosyaya çift tıklayın — <strong>Anahtar Zinciri Erişimi</strong> açılır.</li>
+                      <li>Sertifikaya çift tıklayıp <strong>"Güven"</strong> bölümünden <strong>"Her zaman güven"</strong>i seçin.</li>
+                    </ol>
+                  </details>
+                </div>
+              </div>
+              <!-- ── /Mobil Sertifika ────────────────────────────────── -->
+
             </div>
           </div>
 
