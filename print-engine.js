@@ -387,15 +387,15 @@ async function buildLabel(data, customTemplateBase64, copies) {
 
       // --- 3. DIMENSIONS / ÖLÇÜLER (Turkuaz Box: Center x ~516, y ~416 to ~516) ---
       const dims = `${desi?.en || '0'}x${desi?.boy || '0'}x${desi?.yuk || '0'}`;
-      drawText(dims, 516, 440, { size: 30, weight: 'bold', align: 'center' });
+      drawText(dims, 516, 455, { size: 30, weight: 'bold', align: 'center' });
 
       // --- 4. WEIGHT / AĞIRLIK (Turuncu Box: Center x ~714, y ~408 to ~470) ---
       const weightVal = String(desi?.kg || '0');
-      drawText(weightVal, 714, 420, { size: 32, weight: 'bold', align: 'center' });
+      drawText(weightVal, 714, 435, { size: 32, weight: 'bold', align: 'center' });
 
       // --- 5. DESI / HACİM (Pembe Box: Center x ~714, y ~524 to ~586) ---
       const desiVal = String(desi?.ucret !== null && desi?.ucret !== undefined ? desi.ucret : '0');
-      drawText(desiVal, 714, 535, { size: 32, weight: 'bold', align: 'center' });
+      drawText(desiVal, 714, 550, { size: 32, weight: 'bold', align: 'center' });
 
       // --- 6. QR CODE (Lacivert Box: x ~54, y ~680, w 100, h 100) ---
       try {
