@@ -339,7 +339,7 @@ async function buildLabel(data, customTemplateBase64, copies) {
 
       await addTextBitmap(`EN : ${desi?.en || '0'}`, mm(51.76), mm(56.59), { fontSize: 20 });
       await addTextBitmap(`BOY : ${desi?.boy || '0'}`, mm(51.76), mm(61.00), { fontSize: 20 });
-      await addTextBitmap(`YUKSEKLIK : ${desi?.yukseklik || '0'}`, mm(51.76), mm(65.50), { fontSize: 20 });
+      await addTextBitmap(`YUKSEKLIK : ${desi?.yuk || '0'}`, mm(51.76), mm(65.50), { fontSize: 20 });
       await addTextBitmap(`KILO : ${desi?.kg || '0'}`, mm(51.76), mm(70.00), { fontSize: 20 });
       await addTextBitmap(desiStr, mm(51.76), mm(76.00), { fontSize: 20 });
 
@@ -520,10 +520,10 @@ async function buildLabel(data, customTemplateBase64, copies) {
     .filter(Boolean).join('  ·  ');
   drawWrapped(senderLine, PAD, ALICI_BOTTOM + 32, W - PAD * 2, 21, 'normal', 26);
 
-  const GOND_BOTTOM = 518;
+  const GOND_BOTTOM = 538; // Gönderici kutusu yüksekliği 80 -> 100 dot'a çıkarıldı
   hline(GOND_BOTTOM, 2);
 
-  // ══ 4. BİLGİ BANDI (518 → 592) — GENİŞLETİLDİ / EN-BOY-YÜKSEKLİK EKLENDİ
+  // ══ 4. BİLGİ BANDI (538 → 612) — EN-BOY-YÜKSEKLİK EKLENDİ
   const INFO_H = 74;
   const INFO_Y = GOND_BOTTOM;
 
@@ -545,7 +545,7 @@ async function buildLabel(data, customTemplateBase64, copies) {
   infoCol(`AĞIRLIK (${desiUnit})`, desiVal, 110);
   infoCol('KİLO (kg)',             kiloVal,  330);
   infoCol('EBAT (cm)',
-    `${desi?.en || '0'}x${desi?.boy || '0'}x${desi?.yukseklik || '0'}`,
+    `${desi?.en || '0'}x${desi?.boy || '0'}x${desi?.yuk || '0'}`,
     620);
 
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
@@ -553,10 +553,10 @@ async function buildLabel(data, customTemplateBase64, copies) {
   const INFO_BOTTOM = INFO_Y + INFO_H;
   hline(INFO_BOTTOM, 2);
 
-  // ══ 5. BARKOD & QR BÖLMESİ (592 → 800) — BARKOD DARALTILDI + QR KOD EKLENDİ
+  // ══ 5. BARKOD & QR BÖLMESİ (612 → 800) — BARKOD DARALTILDI + QR KOD EKLENDİ
   // Sol tarafta www.tantex.com.tr içeren QR kod (130x130)
   // Sağ tarafta daraltılmış barkod (500x90) + kodu
-  const BC_Y = 636;
+  const BC_Y = 646; // Bilgi bandı aşağı kaydığı için barkod Y koordinatı da güncellendi
   const BC_W = 500;
   const BC_H = 90;
   const BC_X = 240;
@@ -565,7 +565,7 @@ async function buildLabel(data, customTemplateBase64, copies) {
   try {
     const qrCanvas = document.createElement('canvas');
     await QRCode.toCanvas(qrCanvas, 'www.tantex.com.tr', { margin: 0, width: 130 });
-    ctx.drawImage(qrCanvas, 30, 631, 130, 130);
+    ctx.drawImage(qrCanvas, 30, 641, 130, 130);
   } catch (e) {
     console.warn('[PrintEngine] QR kod çizilemedi:', e);
   }
