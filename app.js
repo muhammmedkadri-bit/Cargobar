@@ -1629,9 +1629,10 @@ const Settings = {
     reader.onload = (e) => {
       const base64Img = e.target.result;
       State.prefs.customTemplate = base64Img;
+      State.prefs.activeTemplate = 'custom'; // Automatically set active template to custom on upload!
       Store.savePrefs();
       Settings.renderCustomTemplate();
-      Toast.show('Özel şablon başarıyla yüklendi.', 'success');
+      Toast.show('Özel şablon başarıyla yüklendi ve aktif edildi.', 'success');
     };
     reader.readAsDataURL(file);
     event.target.value = ''; // reset input
@@ -1640,6 +1641,10 @@ const Settings = {
   clearCustomTemplate() {
     if (confirm('Özel şablonu kaldırmak istediğinize emin misiniz?')) {
       State.prefs.customTemplate = null;
+      // If it was selected as custom, revert to default
+      if (State.prefs.activeTemplate === 'custom') {
+        State.prefs.activeTemplate = 'default';
+      }
       Store.savePrefs();
       Settings.renderCustomTemplate();
       Toast.show('Şablon kaldırıldı.', 'success');
@@ -1648,20 +1653,28 @@ const Settings = {
 
   renderCustomTemplate() {
     const imgElement = document.getElementById('custom-template-img');
-    const container = document.getElementById('custom-template-preview-container');
+    const emptyElement = document.getElementById('custom-template-empty');
     const clearBtn = document.getElementById('clear-template-btn');
 
-    if (!imgElement || !container || !clearBtn) return;
-
-    if (State.prefs.customTemplate) {
-      imgElement.src = State.prefs.customTemplate;
-      container.style.display = 'block';
-      clearBtn.style.display = 'inline-block';
-    } else {
-      imgElement.src = '';
-      container.style.display = 'none';
-      clearBtn.style.display = 'none';
+    if (imgElement && emptyElement) {
+      if (State.prefs.customTemplate) {
+        imgElement.src = State.prefs.customTemplate;
+        imgElement.style.display = 'block';
+        emptyElement.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'inline-block';
+      } else {
+        imgElement.src = '';
+        imgElement.style.display = 'none';
+        emptyElement.style.display = 'flex';
+        if (clearBtn) clearBtn.style.display = 'none';
+      }
     }
+
+    // Sync active classes across cards
+    const activeTpl = State.prefs.activeTemplate || 'default';
+    document.querySelectorAll('.template-card').forEach(c => {
+      c.classList.toggle('active', c.getAttribute('onclick')?.includes(`'${activeTpl}'`));
+    });
   },
 
   checkResetInput() {

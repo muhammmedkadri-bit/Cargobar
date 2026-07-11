@@ -321,6 +321,9 @@ async function buildLabel(data, customTemplateBase64, copies) {
       mc.width = W; mc.height = H;
       const ctx = mc.getContext('2d');
 
+      // Bütün şablonu 5px aşağı kaydır
+      ctx.translate(0, 5);
+
       const C = {
         BLACK: '#000000',
         WHITE: '#ffffff',
@@ -735,11 +738,17 @@ async function printShippingLabel(data, copies = 1) {
 
   const rawPrefs = localStorage.getItem('cb_prefs');
   let customTemplate = null;
+  let activeTemplate = 'default';
   if (rawPrefs) {
-    try { customTemplate = JSON.parse(rawPrefs).customTemplate || null; } catch {}
+    try {
+      const prefs = JSON.parse(rawPrefs);
+      activeTemplate = prefs.activeTemplate || 'default';
+      customTemplate = prefs.customTemplate || null;
+    } catch {}
   }
   
-  const { lbl, images } = await buildLabel(data, customTemplate, copies);
+  const templateToUse = (activeTemplate === 'custom' && customTemplate) ? customTemplate : null;
+  const { lbl, images } = await buildLabel(data, templateToUse, copies);
   console.log('[PrintEngine] Etiket oluşturuldu, TSPL derleniyor...');
   
   const base64Data = compileToTSPLBase64(lbl, images, copies);
@@ -760,11 +769,17 @@ async function printShippingLabel(data, copies = 1) {
 async function previewShippingLabel(data, copies = 1) {
   const rawPrefs = localStorage.getItem('cb_prefs');
   let customTemplate = null;
+  let activeTemplate = 'default';
   if (rawPrefs) {
-    try { customTemplate = JSON.parse(rawPrefs).customTemplate || null; } catch {}
+    try {
+      const prefs = JSON.parse(rawPrefs);
+      activeTemplate = prefs.activeTemplate || 'default';
+      customTemplate = prefs.customTemplate || null;
+    } catch {}
   }
   
-  const { lbl, images } = await buildLabel(data, customTemplate, copies);
+  const templateToUse = (activeTemplate === 'custom' && customTemplate) ? customTemplate : null;
+  const { lbl, images } = await buildLabel(data, templateToUse, copies);
   
   // Önizleme (SVG) için resimleri Label nesnesine tekrar ekle
   for (const img of images) {
