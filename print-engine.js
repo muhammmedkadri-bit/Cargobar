@@ -88,6 +88,38 @@ function imageToMonochromeBitmap(imgElement, targetWidth, targetHeight) {
   };
 }
 
+// PNG byte dizisini (barcodePNG/qrcodePNG çıktısı) monochrome bitmap'e çevirir.
+// rotateDeg: 0 veya 90 — dikey barkod sütunu için 90 kullanılır.
+async function pngBytesToMonochromeBitmap(pngBytes, targetWidthDots, targetHeightDots, rotateDeg = 0) {
+  const blob = new Blob([pngBytes], { type: 'image/png' });
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await loadImg(url);
+    const canvas = document.createElement('canvas');
+    // 90° döndürülecekse tuval boyutlarını yer değiştir
+    const cw = rotateDeg === 90 || rotateDeg === 270 ? targetHeightDots : targetWidthDots;
+    const ch = rotateDeg === 90 || rotateDeg === 270 ? targetWidthDots : targetHeightDots;
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.save();
+    if (rotateDeg === 90) {
+      ctx.translate(cw, 0);
+      ctx.rotate(Math.PI / 2);
+      ctx.drawImage(img, 0, 0, targetWidthDots, targetHeightDots);
+    } else {
+      ctx.drawImage(img, 0, 0, cw, ch);
+    }
+    ctx.restore();
+    // canvas artık hedef boyutta hazır; mevcut monochrome mantığını burada tekrar kullan
+    return imageToMonochromeBitmap(canvas, canvas.width, canvas.height);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 // ─────────────────────────────────────────────────────────
 // AJAN İLETİŞİMİ
 // ─────────────────────────────────────────────────────────
@@ -160,15 +192,15 @@ function wrapText(text, maxChars) {
 async function buildLabel(data, customTemplateBase64, copies) {
   const { tkgCode, alici, gonderici, desi } = data;
 
-  // Barkodu render et (etiket kütüphanesi monochrome bitmap döner)
-  const barcode = barcodePNG(tkgCode || '', { type: 'code128', height: 44, barWidth: 2 });
-
   // 1. ÖZEL ŞABLON AKTİF İSE (Python Absolute Koordinatları)
   if (customTemplateBase64) {
     try {
       const img = await loadImg(customTemplateBase64);
       // 100x100mm etiket için 203 DPI = 800x800 dot çözünürlük
       const bgBitmap = imageToMonochromeBitmap(img, 800, 800);
+
+      const horizontalBarcodeBytes = barcodePNG(tkgCode || '', { type: 'code128', height: 44, barWidth: 2 });
+      const horizontalBarcodeBitmap = await pngBytesToMonochromeBitmap(horizontalBarcodeBytes, 320, 80, 0);
 
       // Türkçe i/İ düzeltmeli Büyük Harf
       const toTrUpper = (str) => (str || '').replace(/i/g, 'İ').toUpperCase();
@@ -194,7 +226,7 @@ async function buildLabel(data, customTemplateBase64, copies) {
         .text(desiStr, { x: mm(51.76), y: mm(76.00), font: '1', size: 1 })
 
         // Barkod
-        .image(barcode, { x: mm(30), y: mm(84), width: 320, height: 80 })
+        .image(horizontalBarcodeBitmap, { x: mm(30), y: mm(84), width: 320, height: 80 })
         .text(tkgCode || '', { x: mm(50), y: mm(95), font: '1', size: 1, align: 'center' });
 
       return lbl;
@@ -208,6 +240,9 @@ async function buildLabel(data, customTemplateBase64, copies) {
   const kiloVal = desi?.kg ? `${desi.kg} kg` : '—';
   const desiUnit = desi?.kg > 20 && desi?.ucret === desi?.kg ? 'KG' : 'DESİ';
   
+  const verticalBarcodeBytes = barcodePNG(tkgCode || '', { type: 'code128' });
+  const verticalBarcodeBitmap = await pngBytesToMonochromeBitmap(verticalBarcodeBytes, 320, 80, 90);
+
   let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies })
     // Dış Çerçeve
     .box({ x: 0, y: 0, width: 800, height: 800, thickness: 4 })
@@ -234,7 +269,7 @@ async function buildLabel(data, customTemplateBase64, copies) {
     .text(`${alici?.ilce || ''} / ${alici?.il || ''}`, { x: mm(4), y: mm(68), size: 1 })
 
     // Dikey Barkod Bölümü (Sağ Sütun)
-    .image(barcode, { x: mm(87), y: mm(20), width: 80, height: 320 }) // rotation: 90 geçici kaldırıldı
+    .image(verticalBarcodeBitmap, { x: mm(87), y: mm(20), width: 80, height: 320 }) // rotation: 90 geçici kaldırıldı
     .text(tkgCode || '', { x: mm(97), y: mm(45), size: 1, rotation: 90 })
 
     .line({ x1: mm(0), y1: mm(78), x2: mm(100), y2: mm(78), thickness: 2 })
