@@ -14,7 +14,8 @@
 console.log('[PrintEngine] Modül yüklenmeye başladı...');
 import { label, tsc } from 'https://esm.sh/portakal';
 import { barcodePNG } from 'https://esm.sh/etiket';
-console.log('[PrintEngine] esm.sh import\'ları tamamlandı:', { label: typeof label, tsc: typeof tsc, barcodePNG: typeof barcodePNG });
+import QRCode from 'https://cdn.jsdelivr.net/npm/qrcode@1.4.4/+esm';
+console.log('[PrintEngine] esm.sh import\'ları tamamlandı:', { label: typeof label, tsc: typeof tsc, barcodePNG: typeof barcodePNG, QRCode: typeof QRCode });
 
 // ─────────────────────────────────────────────────────────
 // AYARLAR (localStorage üzerinden kalıcı; Ayarlar ekranından güncellenir)
@@ -417,9 +418,8 @@ async function buildLabel(data, customTemplateBase64, copies) {
 
   const PAD = 12; // kenar boşluğu (dot)
 
-  // ══ 0. BEYAZ ZEMIN + DIŞ ÇERÇEVE ════════════════════════════
+  // ══ 0. BEYAZ ZEMIN (DIŞ ÇERÇEVE KALDIRILDI) ══════════════════
   fillRect(0, 0, W, H, C.WHITE);
-  strokeRect(0, 0, W, H, 4);
 
   // ══ 1. HEADER (0 → 118) ══════════════════════════════════════
   // Üstte ince siyah dekoratif şerit (marka hissi)
@@ -429,41 +429,34 @@ async function buildLabel(data, customTemplateBase64, copies) {
   const LOGO_X = 5, LOGO_Y = 5, LOGO_S = 108;
   
   let logoLoaded = false;
+  let logoImg = null;
   try {
-    const rawPrefs = localStorage.getItem('cb_prefs');
-    if (rawPrefs) {
-      const prefs = JSON.parse(rawPrefs);
-      // Olası logo alanlarını dene
-      const logoSrc = prefs?.company?.logo || prefs?.logoBase64 || prefs?.logo;
+    const rawCompany = localStorage.getItem('cb_company');
+    if (rawCompany) {
+      const company = JSON.parse(rawCompany);
+      const logoSrc = company?.logo;
       if (logoSrc && logoSrc.startsWith('data:')) {
-        const logoImg = await loadImg(logoSrc);
-        const scale = Math.min((LOGO_S - 8) / logoImg.width, (LOGO_S - 8) / logoImg.height);
-        const lw = logoImg.width * scale, lh = logoImg.height * scale;
-        ctx.drawImage(logoImg,
-          LOGO_X + (LOGO_S - lw) / 2,
-          LOGO_Y + (LOGO_S - lh) / 2,
-          lw, lh);
+        logoImg = await loadImg(logoSrc);
         logoLoaded = true;
       }
     }
-  } catch {}
-
-  if (!logoLoaded) {
-    // Fallback: şirket baş harfleri, siyah kare içinde beyaz metin
-    fillRect(LOGO_X + 4, LOGO_Y + 4, LOGO_S - 8, LOGO_S - 8, C.BLACK);
-    const initials = (gonderici?.unvan || 'E')
-      .split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
-    drawText(initials,
-      LOGO_X + LOGO_S / 2,
-      LOGO_Y + LOGO_S / 2,
-      { size: initials.length > 1 ? 44 : 54, weight: 'bold', align: 'center', baseline: 'middle', color: C.WHITE });
+  } catch (e) {
+    console.warn('Logo yüklenemedi:', e);
   }
 
-  // Logo dış çerçevesi (ince)
-  strokeRect(LOGO_X, LOGO_Y, LOGO_S, LOGO_S, 1.5);
+  if (logoLoaded && logoImg) {
+    const scale = Math.min((LOGO_S - 8) / logoImg.width, (LOGO_S - 8) / logoImg.height);
+    const lw = logoImg.width * scale, lh = logoImg.height * scale;
+    ctx.drawImage(logoImg,
+      LOGO_X + (LOGO_S - lw) / 2,
+      LOGO_Y + (LOGO_S - lh) / 2,
+      lw, lh);
+    // İnce logo çerçevesi
+    strokeRect(LOGO_X, LOGO_Y, LOGO_S, LOGO_S, 1.5);
+  }
 
-  // Şirket adı + slogan: logo sağında, dikey olarak ortalanmış
-  const hdrTextX = LOGO_X + LOGO_S + 14;
+  // Şirket adı + slogan: logo sağında, dikey olarak ortalanmış, sağa dayalı
+  const hdrTextX = logoLoaded ? (LOGO_X + LOGO_S + 14) : PAD;
   const hdrTextMaxW = W - hdrTextX - PAD;
   const companyName = gonderici?.unvan || '';
   const companySlogan = gonderici?.slogan || '';
@@ -474,23 +467,24 @@ async function buildLabel(data, customTemplateBase64, copies) {
   const totalTextH = nameLineH + (companySlogan ? sloganLineH + 4 : 0);
   const textStartY = LOGO_Y + (LOGO_S - totalTextH) / 2;
 
-  drawText(companyName, hdrTextX, textStartY,
-    { size: nameFontSize, weight: 'bold' });
+  drawText(companyName, W - PAD, textStartY,
+    { size: nameFontSize, weight: 'bold', align: 'right' });
   if (companySlogan) {
-    drawText(companySlogan, hdrTextX, textStartY + nameLineH + 4,
-      { size: 21, color: C.GRAY });
+    drawText(companySlogan, W - PAD, textStartY + nameLineH + 4,
+      { size: 21, color: C.GRAY, align: 'right' });
   }
 
   const HDR_H = 118;
   hline(HDR_H, 3); // Kalın ayırıcı çizgi
 
-  // ══ 2. ALICI BÖLMESİ (118 → 498) ═════════════════════════════
+  // ══ 2. ALICI BÖLMESİ (118 → 438) — DARALTILDI ════════════════
   // "ALICI / TO" etiketi: siyah arka plan, beyaz metin
   const ALICI_BAR_H = 30;
   fillRect(0, HDR_H, W, ALICI_BAR_H, C.BLACK);
   drawText('  ALICI / TO', 0, HDR_H + (ALICI_BAR_H - 20) / 2,
     { size: 20, weight: 'bold', color: C.WHITE, baseline: 'top' });
 
+  const ALICI_BOTTOM = 438;
   let recY = HDR_H + ALICI_BAR_H + 10;
 
   // Alıcı adı — en büyük, en kalın
@@ -506,19 +500,17 @@ async function buildLabel(data, customTemplateBase64, copies) {
   // Telefon
   if (alici?.tel) {
     drawText(`☎  ${alici.tel}`, PAD, recY, { size: 23 });
-    recY += 32;
   }
 
   // İl/İlçe — büyük, sağa dayalı, altta (kargo sınıflandırma için kritik)
   const cityStr = [alici?.ilce, alici?.il].filter(Boolean).join(' / ').toUpperCase();
   const cityFontSize = fitFont(cityStr, W - PAD * 2, 38, 24, 'bold');
-  drawText(cityStr, W - PAD, 468,
+  drawText(cityStr, W - PAD, ALICI_BOTTOM - 40,
     { size: cityFontSize, weight: 'bold', align: 'right', baseline: 'top' });
 
-  const ALICI_BOTTOM = 498;
   hline(ALICI_BOTTOM, 3);
 
-  // ══ 3. GÖNDERİCİ BÖLMESİ (498 → 578) ════════════════════════
+  // ══ 3. GÖNDERİCİ BÖLMESİ (438 → 518) ════════════════════════
   const GOND_BAR_W = Math.round(W * 0.38);
   fillRect(0, ALICI_BOTTOM, GOND_BAR_W, 26, C.BLACK);
   drawText('  GÖNDERİCİ / FROM', 0, ALICI_BOTTOM + 4,
@@ -528,16 +520,15 @@ async function buildLabel(data, customTemplateBase64, copies) {
     .filter(Boolean).join('  ·  ');
   drawWrapped(senderLine, PAD, ALICI_BOTTOM + 32, W - PAD * 2, 21, 'normal', 26);
 
-  const GOND_BOTTOM = 578;
+  const GOND_BOTTOM = 518;
   hline(GOND_BOTTOM, 2);
 
-  // ══ 4. BİLGİ BANDI (578 → 652) ══════════════════════════════
+  // ══ 4. BİLGİ BANDI (518 → 592) — GENİŞLETİLDİ / EN-BOY-YÜKSEKLİK EKLENDİ
   const INFO_H = 74;
   const INFO_Y = GOND_BOTTOM;
-  const COL = W / 3;
 
-  vline(COL,     INFO_Y, INFO_Y + INFO_H, 1.5);
-  vline(COL * 2, INFO_Y, INFO_Y + INFO_H, 1.5);
+  vline(220, INFO_Y, INFO_Y + INFO_H, 1.5);
+  vline(440, INFO_Y, INFO_Y + INFO_H, 1.5);
 
   const desiVal = desi?.ucret !== null && desi?.ucret !== undefined ? desi.ucret : '—';
   const kiloVal = desi?.kg ? desi.kg : '—';
@@ -551,32 +542,41 @@ async function buildLabel(data, customTemplateBase64, copies) {
     ctx.font = `bold 30px sans-serif`;
     ctx.fillText(String(value), cx, INFO_Y + 25);
   }
-  infoCol(`AĞIRLIK (${desiUnit})`, desiVal, COL * 0.5);
-  infoCol('KİLO (kg)',             kiloVal,  COL * 1.5);
-  infoCol('TARİH',
-    new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
-    COL * 2.5);
+  infoCol(`AĞIRLIK (${desiUnit})`, desiVal, 110);
+  infoCol('KİLO (kg)',             kiloVal,  330);
+  infoCol('EBAT (cm)',
+    `${desi?.en || '0'}x${desi?.boy || '0'}x${desi?.yukseklik || '0'}`,
+    620);
 
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
 
   const INFO_BOTTOM = INFO_Y + INFO_H;
   hline(INFO_BOTTOM, 2);
 
-  // ══ 5. BARKOD BÖLMESİ (652 → 800) ═══════════════════════════
-  // Barkodu doğrudan master canvas üzerine çiz (ayrı BITMAP komutuna gerek yok)
-  const BC_Y      = INFO_BOTTOM + 8;
-  const BC_W      = 720;
-  const BC_H      = 100;
-  const BC_X      = (W - BC_W) / 2;
+  // ══ 5. BARKOD & QR BÖLMESİ (592 → 800) — BARKOD DARALTILDI + QR KOD EKLENDİ
+  // Sol tarafta www.tantex.com.tr içeren QR kod (130x130)
+  // Sağ tarafta daraltılmış barkod (500x90) + kodu
+  const BC_Y = 636;
+  const BC_W = 500;
+  const BC_H = 90;
+  const BC_X = 240;
 
+  // QR Code (www.tantex.com.tr)
   try {
-    const bcBytes = barcodePNG(tkgCode || '', { type: 'code128', height: 70, barWidth: 3 });
+    const qrCanvas = document.createElement('canvas');
+    await QRCode.toCanvas(qrCanvas, 'www.tantex.com.tr', { margin: 0, width: 130 });
+    ctx.drawImage(qrCanvas, 30, 631, 130, 130);
+  } catch (e) {
+    console.warn('[PrintEngine] QR kod çizilemedi:', e);
+  }
+
+  // Barcode
+  try {
+    const bcBytes = barcodePNG(tkgCode || '', { type: 'code128', height: BC_H, barWidth: 2 });
     const bcBlob  = new Blob([bcBytes], { type: 'image/png' });
     const bcUrl   = URL.createObjectURL(bcBlob);
     const bcImg   = await loadImg(bcUrl);
     URL.revokeObjectURL(bcUrl);
-
-    // Yazıcı Zjiang ters bit mantığı kullanıyor; monochrome için siyah çizgiler korunacak
     ctx.drawImage(bcImg, BC_X, BC_Y, BC_W, BC_H);
   } catch (e) {
     console.warn('[PrintEngine] Barkod çizilemedi:', e);
@@ -584,7 +584,7 @@ async function buildLabel(data, customTemplateBase64, copies) {
 
   // TKG kodu metni (barkodun altında)
   const TKG_Y = BC_Y + BC_H + 4;
-  drawText(tkgCode || '', W / 2, TKG_Y, { size: 22, align: 'center' });
+  drawText(tkgCode || '', BC_X + BC_W / 2, TKG_Y, { size: 22, align: 'center' });
 
   // ══ Tüm canvas'ı tek monochrome bitmap'e çevir ══════════════
   const masterBitmap = imageToMonochromeBitmap(mc, W, H);
