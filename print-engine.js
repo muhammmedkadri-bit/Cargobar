@@ -132,25 +132,37 @@ async function pngBytesToMonochromeBitmap(pngBytes, targetWidthDots, targetHeigh
 // ─────────────────────────────────────────────────────────
 async function agentFetch(path, options = {}) {
   const url = Settings.agentUrl.replace(/\/$/, '') + path;
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Print-Token': Settings.agentToken,
-      ...(options.headers || {})
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000); // 12s hard timeout
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Print-Token': Settings.agentToken,
+        ...(options.headers || {})
+      }
+    });
+    const json = await res.json().catch(() => ({ ok: false, error: 'Ajan geçersiz yanıt döndürdü' }));
+    if (!res.ok || !json.ok) {
+      throw new Error(json.error || `Ajan hatası (HTTP ${res.status})`);
     }
-  });
-  const json = await res.json().catch(() => ({ ok: false, error: 'Ajan geçersiz yanıt döndürdü' }));
-  if (!res.ok || !json.ok) {
-    throw new Error(json.error || `Ajan hatası (HTTP ${res.status})`);
+    return json;
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error('Yazdırma ajanı zaman aşımına uğradı (12s). Ajanın çalıştığından emin olun.');
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-  return json;
 }
 
 async function checkAgentHealth() {
   try {
     const url = Settings.agentUrl.replace(/\/$/, '') + '/health';
-    const res = await fetch(url, { method: 'GET' });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(url, { method: 'GET', signal: controller.signal }).finally(() => clearTimeout(timer));
     if (!res.ok) return false;
     const json = await res.json();
     return !!json.ok;
@@ -349,15 +361,18 @@ async function buildLabel(data, customTemplateBase64, copies) {
   images.push({ bitmap: horizontalBarcodeBitmap, x: mm(10), y: mm(83) });
 
   let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies })
-    // Dış Çerçeve kalın
-    .box({ x: mm(0), y: mm(0), width: mm(100), height: mm(100), thickness: mm(1) })
+    // Dış Çerçeve kalın (4 dot = ~0.5mm)
+    .box({ x: 0, y: 0, width: 800, height: 800, thickness: 4 })
     
-    // --- GÖNDERİCİ (0 - 22mm) ---
-    .box({ x: mm(0), y: mm(0), width: mm(100), height: mm(22), thickness: mm(0.5) }) // Alt sınır çizgisi
-    .line({ x1: mm(0), y1: mm(62), x2: mm(100), y2: mm(62), thickness: mm(0.5) })
-    .line({ x1: mm(33), y1: mm(62), x2: mm(33), y2: mm(76), thickness: mm(0.5) })
-    .line({ x1: mm(66), y1: mm(62), x2: mm(66), y2: mm(76), thickness: mm(0.5) })
-    .line({ x1: mm(0), y1: mm(76), x2: mm(100), y2: mm(76), thickness: mm(0.5) });
+    // --- GÖNDERİCİ arka kutu çizgisi (0-22mm)
+    .line({ x1: 0, y1: mm(22), x2: 800, y2: mm(22), thickness: 2 })
+    // --- Alıcı / Kargo bölümü bölücü çizgi (62mm)
+    .line({ x1: 0, y1: mm(62), x2: 800, y2: mm(62), thickness: 2 })
+    // --- Alt tablo dikey ayırıcılar
+    .line({ x1: mm(33), y1: mm(62), x2: mm(33), y2: mm(76), thickness: 2 })
+    .line({ x1: mm(66), y1: mm(62), x2: mm(66), y2: mm(76), thickness: 2 })
+    // --- Alt tablo alt çizgisi (76mm)
+    .line({ x1: 0, y1: mm(76), x2: 800, y2: mm(76), thickness: 2 });
 
   await addTextBitmap(' GÖNDERİCİ / FROM ', mm(2), mm(2), { fontSize: 20, reverse: true });
   await addTextBitmap((gonderici?.unvan || 'ŞİRKET ÜNVANI').substring(0, 45), mm(2), mm(7), { fontSize: 32, fontWeight: 'bold' });
@@ -441,15 +456,7 @@ function compileToTSPLBase64(lbl, images, copies) {
 // DIŞA AÇILAN ANA FONKSİYON
 // ─────────────────────────────────────────────────────────
 async function printShippingLabel(data, copies = 1) {
-  console.log('YAZDIRILAN VERİ:', JSON.stringify(data, null, 2));
-
-  const healthy = await checkAgentHealth();
-  if (!healthy) {
-    throw new Error(
-      'Yazdırma Ajanı bulunamadı. Yazıcının bağlı olduğu bilgisayarda ' +
-      'print-agent servisinin çalıştığından emin olun (bkz. README).'
-    );
-  }
+  console.log('[PrintEngine] printShippingLabel başladı:', JSON.stringify(data, null, 2));
 
   const rawPrefs = localStorage.getItem('cb_prefs');
   let customTemplate = null;
@@ -458,13 +465,17 @@ async function printShippingLabel(data, copies = 1) {
   }
   
   const { lbl, images } = await buildLabel(data, customTemplate, copies);
+  console.log('[PrintEngine] Etiket oluşturuldu, TSPL derleniyor...');
+  
   const base64Data = compileToTSPLBase64(lbl, images, copies);
+  console.log('[PrintEngine] Derleme tamam, ajana gönderiliyor...');
 
   // Ajanın /print endpoint'ine base64 olarak gönder
   await agentFetch('/print', {
     method: 'POST',
     body: JSON.stringify({ data: base64Data, encoding: 'base64' })
   });
+  console.log('[PrintEngine] Ajana gönderildi.');
   return true;
 }
 
