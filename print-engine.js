@@ -11,8 +11,10 @@
  *   <script type="module" src="print-engine.js"></script>
  */
 
+console.log('[PrintEngine] Modül yüklenmeye başladı...');
 import { label, tsc } from 'https://esm.sh/portakal';
 import { barcodePNG } from 'https://esm.sh/etiket';
+console.log('[PrintEngine] esm.sh import\'ları tamamlandı:', { label: typeof label, tsc: typeof tsc, barcodePNG: typeof barcodePNG });
 
 // ─────────────────────────────────────────────────────────
 // AYARLAR (localStorage üzerinden kalıcı; Ayarlar ekranından güncellenir)
@@ -80,12 +82,22 @@ function imageToMonochromeBitmap(imgElement, targetWidth, targetHeight) {
       }
     }
   }
-  return {
+  const result = {
     data: buffer,
     width: targetWidth,
     height: targetHeight,
     bytesPerRow: bytesPerRow
   };
+  console.log('[DEBUG] imageToMonochromeBitmap çıktısı:', {
+    'data.length': result.data.length,
+    'data constructor': result.data.constructor.name,
+    width: result.width,
+    height: result.height,
+    bytesPerRow: result.bytesPerRow,
+    'beklenen data.length': result.bytesPerRow * result.height,
+    'eşleşiyor mu': result.data.length === result.bytesPerRow * result.height
+  });
+  return result;
 }
 
 // PNG byte dizisini (barcodePNG/qrcodePNG çıktısı) monochrome bitmap'e çevirir.
@@ -198,9 +210,25 @@ async function buildLabel(data, customTemplateBase64, copies) {
       const img = await loadImg(customTemplateBase64);
       // 100x100mm etiket için 203 DPI = 800x800 dot çözünürlük
       const bgBitmap = imageToMonochromeBitmap(img, 800, 800);
+      console.log('[DEBUG] bgBitmap .image() çağrısına gönderilecek:', {
+        'data.length': bgBitmap.data.length,
+        'data constructor': bgBitmap.data.constructor.name,
+        width: bgBitmap.width,
+        height: bgBitmap.height,
+        bytesPerRow: bgBitmap.bytesPerRow,
+        'beklenen (800x800/8)': 800 * 100
+      });
 
       const horizontalBarcodeBytes = barcodePNG(tkgCode || '', { type: 'code128', height: 44, barWidth: 2 });
       const horizontalBarcodeBitmap = await pngBytesToMonochromeBitmap(horizontalBarcodeBytes, 320, 80, 0);
+      console.log('[DEBUG] horizontalBarcodeBitmap .image() çağrısına gönderilecek:', {
+        'data.length': horizontalBarcodeBitmap.data.length,
+        'data constructor': horizontalBarcodeBitmap.data.constructor.name,
+        width: horizontalBarcodeBitmap.width,
+        height: horizontalBarcodeBitmap.height,
+        bytesPerRow: horizontalBarcodeBitmap.bytesPerRow,
+        'beklenen (320x80/8)': 40 * 80
+      });
 
       // Türkçe i/İ düzeltmeli Büyük Harf
       const toTrUpper = (str) => (str || '').replace(/i/g, 'İ').toUpperCase();
@@ -242,6 +270,14 @@ async function buildLabel(data, customTemplateBase64, copies) {
   
   const verticalBarcodeBytes = barcodePNG(tkgCode || '', { type: 'code128' });
   const verticalBarcodeBitmap = await pngBytesToMonochromeBitmap(verticalBarcodeBytes, 320, 80, 90);
+  console.log('[DEBUG] verticalBarcodeBitmap .image() çağrısına gönderilecek:', {
+    'data.length': verticalBarcodeBitmap.data.length,
+    'data constructor': verticalBarcodeBitmap.data.constructor.name,
+    width: verticalBarcodeBitmap.width,
+    height: verticalBarcodeBitmap.height,
+    bytesPerRow: verticalBarcodeBitmap.bytesPerRow,
+    'NOT: 90° döndürme sonrası canvas boyutları değişiyor — width=80, height=320 beklenir'
+  });
 
   let lbl = label({ width: 100, height: 100, unit: 'mm', dpi: 203, copies: copies })
     // Dış Çerçeve
@@ -282,7 +318,11 @@ async function buildLabel(data, customTemplateBase64, copies) {
 }
 
 function compile(lbl) {
-  return tsc.compile(lbl);
+  console.log('[DEBUG] tsc.compile() çağrılıyor...');
+  const result = tsc.compile(lbl);
+  console.log('[DEBUG] tsc.compile() sonucu tip:', typeof result, '| uzunluk:', typeof result === 'string' ? result.length : (result?.length ?? 'N/A'));
+  console.log('[DEBUG] compile çıktısı (ilk 300 karakter):', typeof result === 'string' ? result.substring(0, 300) : JSON.stringify(result)?.substring(0, 300));
+  return result;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -340,3 +380,4 @@ window.PrintEngine = {
   printShippingLabel,
   previewShippingLabel
 };
+console.log('[PrintEngine] window.PrintEngine başarıyla set edildi ✓');
