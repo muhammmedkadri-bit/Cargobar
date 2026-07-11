@@ -905,7 +905,7 @@ const App = {
   },
 
   /* ── Save Prompt (yeni müşteri) ── */
-  handleSavePrompt(shouldSave) {
+  async handleSavePrompt(shouldSave) {
     this.closeModal('modal-save-prompt');
     const data = State.pendingPrintData;
     if (!data) return;
@@ -920,8 +920,8 @@ const App = {
         adres: c.adres, ilce: c.ilce, il: c.il,
         kod: 'M-' + (State.customers.length + 10001),
       };
-      State.customers.push(savedCust);
-      Store.saveCustomers();
+      // State.customers.push is done inside Store.saveCustomer
+      await Store.saveCustomer(savedCust);
     }
 
     Slip.executePrint(data);
