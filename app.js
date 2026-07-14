@@ -494,8 +494,9 @@ const Slip = {
     }
 
     // Formül: En × Boy × Yükseklik / 3000
+    // Enterprise kargo kuralı: küsüratlı desi değerleri bir üst tam sayıya yuvarlanır
     const hacimselDesi = (en * boy * yuk) / 3000;
-    const roundedHacimsel = Math.round(hacimselDesi * 10) / 10;
+    const roundedHacimsel = Math.ceil(hacimselDesi);
 
     // DHL kuralı: ağırlık > 20kg ise ücretlendirme = max(hacimsel, kg)
     let ucretDesi = roundedHacimsel;
@@ -520,7 +521,8 @@ const Slip = {
     const boy = parseFloat(document.getElementById('d-boy').value) || 0;
     const yuk = parseFloat(document.getElementById('d-yukseklik').value) || 0;
     const kg  = parseFloat(document.getElementById('d-kilo').value) || 0;
-    const hacimsel = en && boy && yuk ? Math.round((en * boy * yuk) / 3000 * 10) / 10 : null;
+    // Enterprise kargo kuralı: küsüratlı desi değerleri bir üst tam sayıya yuvarlanır
+    const hacimsel = en && boy && yuk ? Math.ceil((en * boy * yuk) / 3000) : null;
     let ucret = hacimsel;
     if (kg > 20 && hacimsel !== null) ucret = Math.max(hacimsel, kg);
     return { en, boy, yuk, kg, hacimsel, ucret };
