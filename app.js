@@ -393,13 +393,13 @@ const Router = {
     document.getElementById(menus[viewKey])?.classList.add('active');
 
     const titles = {
-      '#/login': 'Entrio Kargo | Giriş',
-      '#/slip': 'Entrio Kargo | Kargo Fişi Oluştur',
-      '#/customers': 'Entrio Kargo | Müşteriler',
-      '#/company': 'Entrio Kargo | Şirket',
-      '#/settings': 'Entrio Kargo | Ayarlar'
+      '#/login': 'EntrioGo | Giriş',
+      '#/slip': 'EntrioGo | Kargo Fişi Oluştur',
+      '#/customers': 'EntrioGo | Müşteriler',
+      '#/company': 'EntrioGo | Şirket',
+      '#/settings': 'EntrioGo | Ayarlar'
     };
-    document.title = titles[viewKey] || 'Entrio Kargo';
+    document.title = titles[viewKey] || 'EntrioGo';
 
     this._prevHash = hash;
 
